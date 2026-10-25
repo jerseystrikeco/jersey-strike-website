@@ -2,9 +2,13 @@
   "name": "jersey-strike-website",
   "private": true,
   "type": "module",
-  "description": "Jersey Strike Co. website with inquiry email + Airtable automation",
+  "description": "Jersey Strike Co. website with inquiry email + Airtable automation and AI-drafted preliminary quotes",
   "scripts": {
-    "test": "node test/test-inquiry.mjs"
+    "test": "node test/test-inquiry.mjs && node test/test-quote.mjs",
+    "test:quote": "node test/test-quote.mjs",
+    "knowledge": "node scripts/build-knowledge.mjs"
   },
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

@@ -31,6 +31,8 @@ export const PLAN_SCHEMA = {
         back_hq: { type: 'string', description: 'Time crew is back at HQ, e.g. "7:30pm" (can be after midnight)' },
         steps: { type: 'array', items: { type: 'object', required: ['time', 'label'], properties: { time: str, label: str } } },
         venue_day: { type: 'boolean', description: 'Crew is on site at the venue this day (base fee day).' },
+        premium_reasons: { type: 'array', items: { type: 'string', enum: ['major_holiday', 'holiday', 'nyc_difficult', 'short_notice', 'extreme_access', 'difficult_scope'] },
+          description: 'Premium labor triggers for THIS crew call. major_holiday = time and a half; each other trigger adds $10/hr (max +$20). Leave empty for normal jobs.' },
       } } },
     studio_days: { type: 'array', items: { type: 'object', required: ['people'], properties: { label: str, date: str, people: numT } } },
     vehicles: { type: 'array', items: { type: 'object', required: ['kind', 'label'], properties: {
@@ -43,6 +45,17 @@ export const PLAN_SCHEMA = {
       uhaul_miles: { type: 'number', description: 'U-Haul only: total miles the U-Haul itself drives (from pickup to return).' },
       notes: str } } },
     equipment: { type: 'object', properties: { ladders: numT, skyscraper_ladders: numT, rigging_kit: { type: 'boolean' } } },
+    fabrication: { type: 'array', description: 'Custom builds (chuppah, arch, arbor, plinths, stage façade, frames, grids, rings, tabletops, trees). Estimate our cost; the engine prices it.',
+      items: { type: 'object', required: ['label', 'materials_cost', 'shop_hours', 'confidence'], properties: {
+        label: str, description: { type: 'string', description: 'What it is, dimensions, finish, how it breaks down/transports.' },
+        materials_cost: { type: 'number', description: 'Our estimated materials cost in $ (lumber/steel/hardware/paint/casters/etc.).' },
+        materials_breakdown: str,
+        shop_hours: { type: 'number', description: 'Shop labor hours to build + finish (not install; install goes in shifts).' },
+        confidence: { type: 'string', enum: ['low', 'medium', 'high'] },
+        comparable: { type: 'string', description: 'Closest past fab job and its price.' },
+        flags: { ...strArr, description: "Claude's concerns: engineering/weight, timeline, structural risk, venue rules, unknown dimensions." },
+        questions_for_larry: strArr,
+        reusable: { type: 'string', description: 'Whether JS could keep it as a rental afterward, and a suggested rental price.' } } } },
     additional_rentals: { type: 'array', items: { type: 'object', properties: { label: str, amount: numT, note: str } } },
     travel: { type: 'object', properties: {
       tolls: numT, tolls_note: str, hotel_nights: numT, hotel_rooms: numT, hotel_rate_estimate: numT, meal_person_days: numT, hotel_reason: str } },
@@ -53,6 +66,8 @@ export const PLAN_SCHEMA = {
     red_flags: strArr,
     missing_info: { ...strArr, description: 'Info to get from the client before quoting for real.' },
     client_questions: { ...strArr, description: 'Short questions the admin can paste into a reply to the client.' },
+    client_history: { type: 'string', description: 'How many times this business appears in past jobs (booked vs archived/declined), and what that means for this quote.' },
+    lean_option: { type: 'string', description: 'For first-time or price-sensitive clients: a leaner alternative (smaller team/shorter scope/strike-only) with its tradeoffs, in one or two sentences. Empty if not useful.' },
     similar_jobs: { type: 'array', items: { type: 'object', properties: { job: str, why: str, charged: str } } },
     task_list: { ...strArr, description: 'Scope / task list in the style of the proposal template, grouped by event.' },
   },
@@ -72,6 +87,12 @@ How to plan:
 - Base fee: count venue days, but waive extra days caused by next-day deliveries/returns that are for our schedule, team safety or convenience (explain in base_fee_note).
 - Destination job (hotel + $50/person/day meals) only if a shift is over 12 hrs on site AND the drive home is over 2 hrs; flag back-to-back far-away days for admin to decide.
 - Studio processing / reset days are flat per person (studio_days), not hourly.
+- Team size: follow past-jobs/00-job-sizing.md (zones → work units → person-hours → fit the window → sanity-check vs similar jobs).
+- Solo (team of 1) only when ALL are true: very easy job, daytime, easy/short drive, no ladders/rigging; say it needs a very strong team member. Night strikes and anything with ladders get at least 2.
+- Premium labor triggers per crew call (premium_reasons): major_holiday = time and a half (Thanksgiving Day + the day after, Dec 24, 25, 26, Dec 31, Jan 1, July 4; e.g. $97.50/hr), holiday = +$10 (the rest of Thanksgiving weekend, Memorial/Labor Day weekends, Valentine's/Mother's Day weeks for floral work), nyc_difficult (Manhattan/Brooklyn/Queens venues with no dock, street parking/permits, security check-in, freight-elevator or union rules, long carries), short_notice (inquiry < 7 days before the event), extreme_access (ladders over 20 ft, scissor lift, heavy hung structures/grids over a dance floor), difficult_scope (the team will clearly work beyond a reasonable expectation: very heavy/awkward pieces, huge piece counts for the window, many long carries or stairs, multiple flips, punishing conditions). Only for genuinely harder calls; explain each in reasoning.
+- Fabrication: if the job needs a custom build, estimate it in "fabrication" (materials cost + shop hours) using past fab jobs as comparables (e.g. metal chuppah $2,800 = $2,200 materials + $600 labor; wooden 8x8 chuppah ~$4,600; standard custom chuppah builds $1,823–3,279; modular arch ~$3,600–3,900; plinth build ~$2,355; 2x6 ft frame $450; 9x4 ft grid $510; chandelier rings $100 each; custom tabletops ~$415 each). Be explicit about confidence, flags and questions for Larry. If Jersey Strike already owns something that fits (wooden chuppah rental $950, arch rental, white plinths $75 each, pole urn + plinth, stage backdrop ~$3,600), suggest renting it instead via additional_rentals.
+- Viability: Jersey Strike aims for a 50% gross margin on every job. Team pay is $30/hr ($45 on major holidays, overtime after 40 hrs/week) and includes each person's drive from home (often ~1 hr each way beyond HQ). The engine calculates margin; in reasoning, call out anything that would squeeze it (long drives, idle waits between install and strike, extra crew for safety, many small multi-day calls, grandfathered rates) and suggest how to restructure (fewer trips, combine calls, next-day strike, U-Haul vs van).
+- Client history: check the past jobs for this business. Many first-time inquirers haven't budgeted for Jersey Strike yet and often book on their 3rd–5th inquiry or when in a pinch. For first-timers and past declines, keep the quote honest (don't cut safety/team below what the job needs), fill lean_option with a leaner alternative, and note it in client_history.
 - Compare against the past jobs and list the most similar ones with what was charged.
 - Do NOT calculate prices. Return quantities and times only; the pricing engine does the math.
 - Times: use "h:mmam"/"h:mmpm" (e.g. "6:15am", "12:30am").

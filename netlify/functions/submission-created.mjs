@@ -16,6 +16,8 @@
 //   AIRTABLE_BASE_ID   your base ID, starts with "app"
 //   AIRTABLE_TABLE     optional; defaults to your EVENT INQUIRIES + LEADS table
 
+import { triggerSecret } from './lib/trigger.mjs';
+
 // Netlify sets URL to the live site address (the netlify.app address now, jerseystrike.com once the domain is connected).
 const SITE = (process.env.URL || 'https://jerseystrike.com').replace(/\/$/, '');
 
@@ -70,12 +72,25 @@ const DETAILS = [
     ['linen_dropoff', 'Linen drop spot'],
     ['linen_bags', 'Linen bags'],
     ['other_rentals', 'Other vendors’ rentals'],
+    ['other_rentals_detail', 'Rentals coming back'],
     ['client_staff', 'Their staff on site'],
+  ]],
+  ['Rigging + ladder work', [
+    ['rig_phase', 'Needed for'],
+    ['rig_height', 'Working height'],
+    ['rig_start', 'Install: on site from', 'time'],
+    ['rig_end', 'Install: done by', 'time'],
+    ['rig_strike_start', 'Strike can start', 'time'],
+    ['rig_hard_out', 'Venue hard out', 'time'],
+    ['rig_pieces', 'Pieces'],
+    ['rig_weight', 'Heaviest piece'],
+    ['rig_points', 'Hanging from', 'list'],
   ]],
   ['Install + set-up', [
     ['load_in', 'Load-in can start', 'time'],
     ['ready_by', 'Must be finished by', 'time'],
     ['flip', 'Room flip'],
+    ['flip_window', 'Flip window'],
     ['built', 'Pieces arrive'],
     ['team_needs', 'Team needs', 'list'],
   ]],
@@ -86,6 +101,7 @@ const DETAILS = [
     ['holiday_property', 'Site type'],
     ['holiday_scope', 'Installing', 'list'],
     ['holiday_height', 'Highest work'],
+    ['holiday_deinstall_needed', 'De-install needed'],
     ['holiday_deinstall', 'De-install', 'date'],
   ]],
   ['Trucking + access', [
@@ -102,6 +118,15 @@ const DETAILS = [
   ['Rentals', [
     ['rental_items', 'Items'],
     ['rental_handoff', 'Pickup / delivery'],
+    ['rental_address', 'Delivery address'],
+  ]],
+  ['Our read (internal)', [
+    ['est_crew_hours', 'Crew-hours needed'],
+    ['est_window', 'Time window (hrs)'],
+    ['est_crew', 'Crew size'],
+    ['est_drive', 'Drive each way'],
+    ['vehicle_flag', 'Vehicle'],
+    ['est_notes', 'Risks + notes'],
   ]],
   ['Links', [
     ['docs_link', 'Files', 'link'],
@@ -138,6 +163,8 @@ export function detailSections(q) {
 // Plain-text version for Airtable's Scope of Work column and the text email.
 export function scopeText(q) {
   const out = [];
+  if (q.team) out.push('TEAM ENTRY', `Entered by: ${q.enteredBy || 'team'}`, `Came in by: ${q.inquirySource || 'not noted'}`, '');
+  if (q.team && q.missing.length) out.push('STILL MISSING (follow up)', ...q.missing.map((x) => `• ${x}`), '');
   if (q.services.length) out.push('SERVICES', ...q.services.map((x) => `• ${x}`), '');
   for (const sec of detailSections(q)) {
     out.push(sec.title.toUpperCase());
@@ -147,7 +174,8 @@ export function scopeText(q) {
     }
     out.push('');
   }
-  if (q.scope) out.push('THEIR NOTES', q.scope, '');
+  if (q.scope) out.push(q.team ? 'NOTES' : 'THEIR NOTES', q.scope, '');
+  if (q.originalMessage) out.push('THEIR ORIGINAL MESSAGE', q.originalMessage, '');
   if (q.files.length) out.push('DOCUMENTS', ...q.files.map((f) => `${f.filename}: ${f.url}`), '');
   if (q.acknowledged) out.push('Agreed: quote is a preliminary estimate; added hours/team billed if scope changes (timeline, collection list, delivery locations); final details due 14 days out.');
   return out.join('\n').trim();
@@ -160,7 +188,7 @@ export default async (req) => {
   } catch {
     return new Response('Bad request', { status: 400 });
   }
-  if (!payload || payload.form_name !== 'inquiry') return new Response('Ignored');
+  if (!payload || !['inquiry', 'team-quote'].includes(payload.form_name)) return new Response('Ignored');
 
   const inquiry = normalize(payload);
   const results = await Promise.allSettled([sendEmail(inquiry), saveToAirtable(inquiry)]);
@@ -169,8 +197,30 @@ export default async (req) => {
     if (r.status === 'rejected') console.error(`[inquiry] ${step} failed:`, r.reason?.message || r.reason);
     else console.log(`[inquiry] ${step} ok`);
   });
+  // Phase 2: start the AI-drafted preliminary quote (admin review only, never sent to the client).
+  try {
+    await startQuoteDraft(inquiry, results[1].status === 'fulfilled' ? results[1].value : null);
+  } catch (e) {
+    console.error('[inquiry] quote draft not started:', e.message);
+  }
   return new Response('OK');
 };
+
+// Hands the inquiry to draft-quote-background.mjs. Skipped when Phase 2 isn't set up
+// (no ANTHROPIC_API_KEY / QUOTE_TRIGGER_SECRET). The quote gets the full formatted scope.
+async function startQuoteDraft(q, recordId) {
+  const secret = triggerSecret();
+  if (!secret) return;
+  const inquiry = { ...q, scope: scopeText(q), clientNotes: q.scope };
+  delete inquiry.raw;
+  const r = await fetch(`${SITE}/.netlify/functions/draft-quote-background`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-quote-secret': secret },
+    body: JSON.stringify({ inquiry, recordId }),
+  });
+  if (!r.ok && r.status !== 202) throw new Error(`draft-quote-background ${r.status}`);
+  console.log('[inquiry] quote draft started');
+}
 
 // ---------- Clean up the raw form data ----------
 
@@ -207,6 +257,12 @@ export function normalize(payload) {
     scope: s(d.scope),
     source: s(d.source_page),
     acknowledged: /^(yes|on|true)$/i.test(s(d.acknowledged)),
+    // Team worksheet entries (form "team-quote").
+    team: payload.form_name === 'team-quote',
+    enteredBy: s(d.entered_by),
+    inquirySource: s(d.inquiry_source),
+    originalMessage: s(d.original_message),
+    missing: s(d.missing).split(';').map((x) => x.trim()).filter(Boolean),
     files,
     // Every answer, for the grouped details (see DETAILS).
     raw: Object.fromEntries(Object.entries(d).map(([k, v]) => [k, typeof v === 'object' ? '' : s(v)])),
@@ -229,7 +285,7 @@ const esc = (v) =>
 
 export function subjectFor(q) {
   const when = prettyDate(q.eventDate).replace(/^\w+, /, '');
-  return `New Inquiry: ${when} at ${q.venue || 'venue TBD'}${q.business ? ` · ${q.business}` : ''}`;
+  return `${q.team ? 'Team entry' : 'New Inquiry'}: ${when} at ${q.venue || 'venue TBD'}${q.business ? ` · ${q.business}` : ''}`;
 }
 
 export function renderEmail(q) {
@@ -268,7 +324,7 @@ export function renderEmail(q) {
 <tr><td style="background:#0A100D;padding:22px 28px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
 <td><img src="${SITE}/images/jersey-strike-logo.png" width="120" alt="Jersey Strike" style="display:block;border:0"></td>
-<td align="right" style="color:#D8B46A;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700">New inquiry</td>
+<td align="right" style="color:#D8B46A;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700">${q.team ? `Team entry · ${esc(q.enteredBy)}` : 'New inquiry'}</td>
 </tr></table></td></tr>
 <tr><td style="padding:26px 28px 4px">
 <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2">${esc(q.business || q.contact || 'New inquiry')}</div>
@@ -279,7 +335,9 @@ ${section('Contact', row('Business', esc(q.business)) + row('Point of contact', 
 ${section('Event', row('Date', esc(prettyDate(q.eventDate))) + row('Venue / site', esc(q.venue) + map) + detailRows(details.find((x) => x.title === 'Event')))}
 ${section('Services', `<tr><td style="padding:10px 0 4px">${chips(q.services) || '<span style="color:#A8A391">Not provided</span>'}</td></tr>`)}
 ${details.filter((x) => x.title !== 'Event').map((sec) => section(sec.title, detailRows(sec))).join('\n')}
-${section('Their notes', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.55">${scope || '<span style="color:#A8A391">Not provided</span>'}</td></tr>`)}
+${q.team && q.missing.length ? section('Still missing: follow up', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.6;color:#9A2738">${q.missing.map((x) => `• ${esc(x)}`).join('<br>')}</td></tr>`) : ''}
+${q.originalMessage ? section('Their original message', `<tr><td style="padding:10px 0;font-size:14px;line-height:1.55;color:#2B2A24">${esc(q.originalMessage).replace(/\n/g, '<br>')}</td></tr>`) : ''}
+${section(q.team ? 'Notes' : 'Their notes', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.55">${scope || '<span style="color:#A8A391">Not provided</span>'}</td></tr>`)}
 ${section('Documents', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.7">${docs || '<span style="color:#A8A391">No files uploaded</span>'}</td></tr>`)}
 <tr><td style="padding:24px 28px;font-size:12px;color:#7A6F55;border-top:1px solid #E2D9C4">
 ${q.acknowledged ? 'Agreed to the preliminary-estimate, scope-change billing and 14-day terms. ' : ''}Submitted ${esc(new Date(q.received).toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' }))} ET from ${esc(SITE + (q.source || ''))}. Also saved to EVENT INQUIRIES + LEADS in Airtable.
@@ -320,6 +378,7 @@ async function sendEmail(q) {
 
 function notesText(q) {
   const when = new Date(q.received).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+  if (q.team) return `Entered by ${q.enteredBy || 'team'} from a${/^[aeiou]/i.test(q.inquirySource) ? 'n' : ''} ${(q.inquirySource || 'outside').toLowerCase()} inquiry, ${when}. Full details in Scope of Work.`;
   return `Website inquiry ${when}. Full details in Scope of Work.`;
 }
 
@@ -335,7 +394,7 @@ export function airtableFields(q) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(q.eventDate)) f[F.eventDate] = q.eventDate;
   if (q.services.some((s) => /fabrication/i.test(s))) f[F.fabrication] = true;
   const opt = {
-    [OPTIONAL.status]: process.env.AIRTABLE_STATUS_VALUE || 'NEED REPLY',
+    [OPTIONAL.status]: q.team ? (q.missing.length ? 'NEED REPLY' : 'NEED QUOTE') : process.env.AIRTABLE_STATUS_VALUE || 'NEED REPLY',
     [OPTIONAL.email]: q.email,
     [OPTIONAL.phone]: q.phone,
     [OPTIONAL.venue]: q.venue,
@@ -368,7 +427,7 @@ async function saveToAirtable(q) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ records: [{ fields }], typecast: true }),
     });
-    if (r.ok) return;
+    if (r.ok) { try { return JSON.parse(await r.text()).records?.[0]?.id || null; } catch { return null; } }
     const text = await r.text();
     let msg = text;
     try { msg = JSON.parse(text).error?.message || text; } catch {}

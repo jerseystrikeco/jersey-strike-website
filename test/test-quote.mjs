@@ -28,7 +28,7 @@ check(std.adminPct === 0.08 && std.lines[0].rate === 65, 'standard client: $65/h
 const strike = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 2, depart_hq: '9pm', back_hq: '1am' }] }, {});
 check(strike.total === 885.6 && strike.warnings.some((w) => /Under the \$1,500.00 strike minimum by \$614.40/.test(w)), 'under the strike minimum: flagged, not bumped');
 const bat = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:45pm', back_hq: '2:00am' }], vehicles: [{ kind: 'van', label: 'JS van', round_trip_miles: 35 }] }, {});
-check(bat.itemsSubtotal === 863.75 && bat.total === 1256.85 && bat.warnings.length === 1, 'Battello-size strike for a standard client: $1,256.85 + minimum flag');
+check(bat.itemsSubtotal === 863.75 && bat.total === 1256.85 && bat.warnings.some((w) => /strike minimum/.test(w)), 'Battello-size strike for a standard client: $1,256.85 + minimum flag');
 const aptp = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:45pm', back_hq: '2:00am' }], vehicles: [{ kind: 'van', label: 'JS van', round_trip_miles: 35 }] }, { business: 'A Petal To Peddle' });
 check(aptp.total === 1256.85 && !aptp.warnings.length, 'A Petal to Peddle grandfathered: no minimum flag');
 const lily = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:30pm', back_hq: '3:45am' }], vehicles: [{ kind: 'van', label: 'Van', round_trip_miles: 70 }] }, { business: 'A Lily Among Thorns' });
@@ -36,6 +36,27 @@ check(lily.subtotal === 1588.75 && lily.admin === 127.1 && lily.discount.amount 
 check(priceUhaul({ days: 1, miles: 50 }).days === 2, 'U-Haul minimum 2 days');
 const ct = priceQuote({ vehicles: [{ kind: 'client_truck', label: 'Client truck', round_trip_miles: 120, trips: 2 }] }, {});
 check(ct.lines[0].amount === 400, 'client truck management: $200 minimum per round trip');
+
+const prem = priceQuote({ shifts: [
+  { label: 'NYC holiday strike', kind: 'strike', team_size: 2, depart_hq: '9pm', back_hq: '2am', premium_reasons: ['holiday', 'nyc_difficult'] },
+  { label: 'NYC strike', kind: 'strike', team_size: 2, depart_hq: '9pm', back_hq: '2am', premium_reasons: ['nyc_difficult'] },
+  { label: 'Solo day delivery', kind: 'delivery', team_size: 1, depart_hq: '9am', back_hq: '1pm', premium_reasons: ['holiday', 'nyc_difficult', 'short_notice'] }] }, {});
+check(prem.lines[0].rate === 85 && prem.lines[1].rate === 75 && prem.lines[2].rate === 85, 'premium labor: +$10 per trigger, capped at $85');
+check(prem.warnings.some((w) => /solo shift/.test(w)), 'solo shifts are flagged');
+const xmas = priceQuote({ shifts: [{ label: 'Day after Christmas', kind: 'install', team_size: 2, depart_hq: '8am', back_hq: '4pm', premium_reasons: ['major_holiday'] },
+  { label: 'NYE NYC', kind: 'strike', team_size: 2, depart_hq: '9pm', back_hq: '3am', premium_reasons: ['major_holiday', 'nyc_difficult'] }] }, {});
+check(xmas.lines[0].rate === 97.5 && xmas.lines[1].rate === 112.5, 'major holiday = time and a half ($97.50; $112.50 with an NYC premium)');
+const wprem = priceQuote({ shifts: [{ label: 'Wile install', kind: 'install', team_size: 3, depart_hq: '6am', back_hq: '6pm', premium_reasons: ['holiday'] }] }, { business: 'Wile Events' });
+check(wprem.lines[0].rate === 50 && wprem.warnings.some((w) => /grandfathered rates; no premium/.test(w)), 'Wile grandfathered rate is not bumped by premiums (flagged instead)');
+
+const fab = priceQuote({ fabrication: [{ label: 'Custom 8x8 metal chuppah', materials_cost: 900, shop_hours: 14, confidence: 'medium', flags: ['Weight of florals unknown'], questions_for_larry: ['Powder coat or paint?'] }] }, {});
+check(fab.lines[0].amount === 2710 && fab.fabs.length === 1 && fab.warnings.some((w) => /Larry/.test(w)), 'fabrication: materials x2 + shop hrs x $65, flagged for Larry');
+const { quoteSubject } = await import('../netlify/functions/lib/quote-render.mjs');
+check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $2,926.80'), 'fab jobs flag the email subject');
+
+check(wile.margin.cost > 4500 && wile.margin.cost < 6000 && wile.margin.pct > 40 && wile.margin.pct < 55, `Wile weekend margin ≈ ${wile.margin.pct}% (cost ${wile.margin.cost})`);
+check(/Wile Events exception|worth it/.test(wile.margin.verdict) && !wile.warnings.some((w) => /Gross margin/.test(w)), 'Wile is judged on gross-profit dollars, not %: ' + wile.margin.verdict);
+check(bat.margin.pct > 50, `Battello-size strike margin ${bat.margin.pct}%`);
 
 // ---- Full pipeline with fake endpoints
 const calls = [];

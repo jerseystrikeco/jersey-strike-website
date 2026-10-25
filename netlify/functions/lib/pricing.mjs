@@ -6,6 +6,13 @@
 
 export const RATES = {
   laborPerHour: 65, // all labor types
+  // Premium labor: +$10/hr per trigger on that crew call, max +$20 (=$75 / $85).
+  // Triggers: holiday, nyc_difficult, short_notice, extreme_access, difficult_scope (see PRICING-FORMULA.md).
+  premiumPerTrigger: 10,
+  premiumMax: 20,
+  // Major holidays (Thanksgiving Day + Black Friday, Dec 24–26, Dec 31–Jan 1, July 4): time and a half
+  // on the whole rate, e.g. $65 -> $97.50 (what we charged the day after Christmas 2025).
+  majorHolidayMultiplier: 1.5,
   studioDayPerPerson: 450, // processing / design studio / reset days, flat
   baseFeePerVenueDay: 300,
   adminFeePct: 0.08, // applied last, on everything
@@ -17,6 +24,20 @@ export const RATES = {
   skyscraperLadder: 150, // 12-24 ft
   riggingKit: 100,
   mealPerPersonDay: 50, // destination jobs
+  // Custom fabrication (Claude's estimate; Larry confirms every one):
+  // price = materials (our cost) x materialsMarkup + shop hours x shopRate.
+  fab: { materialsMarkup: 2, shopRate: 65 },
+  // What jobs cost us (for the gross-margin check; never shown to clients).
+  cost: {
+    teamPay: 30, // $/hr, all jobs
+    holidayPay: 45, // major holidays
+    overtimeAfter: 40, // hrs clocked in a week -> time and a half
+    homeDriveHrs: 1, // extra paid drive per person per crew call (home <-> HQ round trip), avg assumption
+    studioDayHrs: 8, // paid hours per person on a flat studio day
+    fuelPerMile: 0.7, // our fuel cost, any vehicle
+  },
+  targetMargin: 0.5, // aim for 50% gross profit on every job
+  bigJobGrossProfit: 2000, // a job clearing $2k+ gross profit can run under 50%
   minimums: { strike_only: 1500, full_service: 5000 }, // all-in totals incl. admin; drafts FLAG jobs under these, don't bump
   uhaul: {
     costPerDay: 87.5, // what U-Haul charges us (used when there's no real quote)
@@ -35,8 +56,9 @@ export const GRANDFATHERED = [
   {
     match: /\bwile\b/i,
     name: 'Wile Events',
-    laborPerHour: { install: 50, design: 50, flip: 50 }, // strike/returns stay at $65, as on past Wile quotes
+    laborPerHour: { install: 50, design: 50, flip: 50 }, // strike/returns stay at $65. Wile is the ONLY client still at $50 (being phased out).
     adminFeePct: 0.05,
+    marginByDollars: true, // judged on gross-profit dollars: high average project value (often $5k+ net)
     note: 'Wile Events is grandfathered: $50/hr install, design and flip labor (strike stays $65/hr) and a 5% admin fee.',
   },
   {
@@ -121,6 +143,8 @@ export function priceQuote(plan, inquiry = {}) {
   const lines = [];
   const warnings = [];
   const uhauls = [];
+  const costs = [];
+  let personHrs = 0;
   const add = (section, label, math, amount, extra = {}) =>
     lines.push({ section, label, math, amount: round2(amount), ...extra });
 
@@ -131,16 +155,30 @@ export function priceQuote(plan, inquiry = {}) {
       hrs = num(s.hours);
       warnings.push(`Couldn't read the times for "${s.label}"; used ${hrs} hrs.`);
     }
+    if (Math.round(num(s.team_size)) === 1) warnings.push(`"${s.label}" is a solo shift: only OK with a very strong team member, a very easy job, daytime and an easy drive.`);
     if (hrs > 16) warnings.push(`"${s.label}" is ${hrs} hrs portal to portal. Check team safety / hotel.`);
     const kind = s.kind || 'install';
-    const rate = g?.laborPerHour?.[kind] ?? R.laborPerHour;
+    const grand = g?.laborPerHour?.[kind];
+    const triggers = [...new Set((s.premium_reasons || []).filter(Boolean))];
+    let rate = grand ?? R.laborPerHour;
+    const major = triggers.includes('major_holiday');
+    const adders = triggers.filter((t) => t !== 'major_holiday');
+    if (grand == null) {
+      if (adders.length) rate += Math.min(R.premiumMax, adders.length * R.premiumPerTrigger);
+      if (major) rate = round2(rate * R.majorHolidayMultiplier);
+    }
+    if (triggers.length && grand != null) warnings.push(`"${s.label}" has premium triggers (${triggers.join(', ')}) but ${g.name} is on grandfathered rates; no premium applied.`);
     const team = Math.max(0, Math.round(num(s.team_size)));
+    const payRate = major && grand == null ? R.cost.holidayPay : R.cost.teamPay;
+    costs.push({ what: `${s.label}: ${team} × (${hrs} + ${R.cost.homeDriveHrs} home drive) hrs × ${fmt(payRate)}`, amount: team * (hrs + R.cost.homeDriveHrs) * payRate });
+    personHrs += team * hrs;
     add('Labor', [s.label, s.date].filter(Boolean).join(' | '),
-      `Team of ${team} × ${hrs} hrs × ${fmt(rate)}/hr (${s.depart_hq} → ${s.back_hq} portal to portal)`,
+      `Team of ${team} × ${hrs} hrs × ${fmt(rate)}/hr (${s.depart_hq} → ${s.back_hq} portal to portal)${triggers.length && grand == null ? `; premium: ${triggers.join(' + ').replace(/_/g, ' ')}` : ''}`,
       team * hrs * rate, { hours: hrs, team, rate, roles: s.roles || '' });
   }
   for (const d of plan.studio_days || []) {
     const p = Math.max(0, Math.round(num(d.people)));
+    costs.push({ what: `${d.label || 'Studio day'}: ${p} × ${R.cost.studioDayHrs} hrs × ${fmt(R.cost.teamPay)}`, amount: p * R.cost.studioDayHrs * R.cost.teamPay });
     add('Labor', [d.label || 'Studio day', d.date].filter(Boolean).join(' | '),
       `${p} × ${fmt(R.studioDayPerPerson)} flat per person`, p * R.studioDayPerPerson);
   }
@@ -153,25 +191,42 @@ export function priceQuote(plan, inquiry = {}) {
     const label = v.label || v.kind;
     if (v.kind === 'van') {
       const miles = rt * trips * count;
+      costs.push({ what: `${label}: ${miles} mi fuel`, amount: miles * R.cost.fuelPerMile });
       add('Vehicles', label, `${plural(count, 'van')} × ${rt} mi round trip × ${plural(trips, 'trip')} × ${fmt(R.vanPerMile)}/mi`, miles * R.vanPerMile);
     } else if (v.kind === 'uhaul') {
       const miles = num(v.uhaul_miles) > 0 ? num(v.uhaul_miles) : rt * trips;
       for (let i = 0; i < count; i++) {
         const u = priceUhaul({ days: v.rental_days, miles, quotedCost: v.uhaul_quoted_cost });
         uhauls.push({ label, ...u });
+        costs.push({ what: `${label}: U-Haul (our cost) + fuel`, amount: u.ourCost * (num(v.uhaul_quoted_cost) > 0 ? 1 : 1 + R.uhaul.taxesFeesPct) + u.miles * R.cost.fuelPerMile });
         add('Vehicles', `${label}: rental + mileage`, `${u.chosen.math} (Method ${u.chosen.method}; our cost ${fmt(u.ourCost)})`, u.chosen.amount);
         add('Vehicles', `${label}: fuel`, `${plural(trips, 'round trip')} × ${fmt(R.boxTruckFuelPerRoundTrip)} flat`, trips * R.boxTruckFuelPerRoundTrip);
         add('Vehicles', `${label}: U-Haul management`, `${u.miles} mi × ${fmt(R.managementPerMile)}/mi`, u.miles * R.managementPerMile);
       }
     } else if (v.kind === 'client_truck') {
       const per = Math.max(R.managementMinClientTruck, rt * R.managementPerMile);
+      // driver is already paid on the crew call; no extra vehicle cost
       add('Vehicles', `${label}: truck management (driving client's truck)`,
         `${plural(trips, 'round trip')} × greater of ${fmt(R.managementMinClientTruck)} or ${rt} mi × ${fmt(R.managementPerMile)}`, per * trips * count);
     } else if (v.kind === 'box_truck') {
+      costs.push({ what: `${label}: fuel`, amount: rt * trips * count * R.cost.fuelPerMile });
       add('Vehicles', `${label}: fuel`, `${plural(trips * count, 'round trip')} × ${fmt(R.boxTruckFuelPerRoundTrip)} flat`, trips * count * R.boxTruckFuelPerRoundTrip);
       warnings.push(`"${label}" is a box truck that isn't a U-Haul or the client's. Only fuel is charged; confirm whose truck it is.`);
     }
   }
+
+  // Custom fabrication
+  const fabs = [];
+  for (const f of plan.fabrication || []) {
+    const mat = Math.max(0, num(f.materials_cost));
+    const hrs = Math.max(0, num(f.shop_hours));
+    const amount = mat * R.fab.materialsMarkup + hrs * R.fab.shopRate;
+    fabs.push({ ...f, amount: round2(amount) });
+    costs.push({ what: `${f.label || 'Fabrication'}: materials + ${hrs} shop hrs × ${fmt(R.cost.teamPay)}`, amount: mat + hrs * R.cost.teamPay });
+    add('Fabrication', f.label || 'Custom fabrication',
+      `materials ${fmt(mat)} × ${R.fab.materialsMarkup} + ${hrs} shop hrs × ${fmt(R.fab.shopRate)} (estimate; Larry to confirm)`, amount);
+  }
+  if (fabs.length) warnings.push('Custom fabrication is a Claude estimate: Alyssa to check with Larry before quoting.');
 
   // Equipment
   const eq = plan.equipment || {};
@@ -179,17 +234,21 @@ export function priceQuote(plan, inquiry = {}) {
   if (num(eq.skyscraper_ladders) > 0) add('Equipment', 'Skyscraper ladder (12–24 ft)', `${eq.skyscraper_ladders} × ${fmt(R.skyscraperLadder)}`, num(eq.skyscraper_ladders) * R.skyscraperLadder);
   if (eq.rigging_kit) add('Equipment', 'Rigging tool kit', 'flat', R.riggingKit);
   for (const r of plan.additional_rentals || []) {
+    if (num(r.amount) > 0 && !r.js_owned) costs.push({ what: `${r.label || 'Rental'} (pass-through)`, amount: num(r.amount) });
     if (num(r.amount) > 0) add('Equipment', r.label || 'Additional rental', r.note ? `pass-through: ${r.note}` : 'pass-through', num(r.amount));
   }
 
   // Travel
   const t = plan.travel || {};
+  if (num(t.tolls) > 0) costs.push({ what: 'Tolls', amount: num(t.tolls) });
   if (num(t.tolls) > 0) add('Travel', 'Tolls (estimate)', t.tolls_note || 'pass-through', num(t.tolls));
   if (num(t.hotel_nights) > 0 && num(t.hotel_rooms) > 0) {
     const rate = num(t.hotel_rate_estimate, 180);
+    costs.push({ what: 'Hotel', amount: num(t.hotel_rooms) * num(t.hotel_nights) * rate });
     add('Travel', 'Hotel (estimate, pass-through)', `${plural(num(t.hotel_rooms), 'room')} × ${plural(num(t.hotel_nights), 'night')} × ${fmt(rate)}`,
       num(t.hotel_rooms) * num(t.hotel_nights) * rate);
   }
+  if (num(t.meal_person_days) > 0) costs.push({ what: 'Meals', amount: num(t.meal_person_days) * R.mealPerPersonDay });
   if (num(t.meal_person_days) > 0) add('Travel', 'Meal allowance', `${num(t.meal_person_days)} person-days × ${fmt(R.mealPerPersonDay)}`, num(t.meal_person_days) * R.mealPerPersonDay);
 
   const itemsSubtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
@@ -215,8 +274,20 @@ export function priceQuote(plan, inquiry = {}) {
     warnings.push(`Under the ${fmt(minimum)} ${plan.job_type === 'strike_only' ? 'strike' : 'full-service day-of'} minimum by ${fmt(minimum - total)} (all-in). Not bumped up; decide whether to apply it.`);
   }
 
+  // Gross margin check (target 50%)
+  const cost = round2(costs.reduce((a, c) => a + c.amount, 0));
+  const gp = round2(total - cost);
+  const marginPct = total > 0 ? gp / total : 0;
+  const neededTotal = round2(cost / (1 - R.targetMargin));
+  const margin = { cost, costs: costs.map((c) => ({ ...c, amount: round2(c.amount) })), gp, pct: Math.round(marginPct * 1000) / 10, target: R.targetMargin * 100,
+    neededTotal, verdict: marginPct >= R.targetMargin ? 'on target' : gp >= R.bigJobGrossProfit ? `under 50% but worth it: ${fmt(gp)} gross profit`
+      : g?.marginByDollars ? `${g.name} exception: judged on gross-profit dollars (${fmt(gp)})` : marginPct >= 0.4 ? 'below target' : 'not viable as quoted' };
+  if (marginPct < R.targetMargin && total > 0 && gp < R.bigJobGrossProfit && !g?.marginByDollars) warnings.push(`Gross margin ${margin.pct}% is under the 50% target (cost ${fmt(cost)}). ${fmt(neededTotal)} would hit 50%.`);
+  const perPerson = (plan.shifts || []).length ? personHrs / Math.max(1, ...(plan.shifts || []).map((s) => num(s.team_size))) : 0;
+  if (perPerson > R.cost.overtimeAfter * 0.6) warnings.push(`About ${Math.round(perPerson)} hrs per person on this job: check the crew's weekly hours. Over 40 clocked = overtime at $45/hr.`);
+
   return {
-    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, admin, discount, total, uhauls, warnings,
+    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, admin, discount, total, uhauls, fabs, margin, warnings,
     grandfathered: g ? g.note : '',
   };
 }

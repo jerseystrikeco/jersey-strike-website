@@ -38,3 +38,11 @@ fieldset[hidden]{display:none !important}
 .form-section{animation:fsIn .25s ease}
 @keyframes fsIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.form-section{animation:none}}
+
+/* Inquiry form: one question at a time */
+form.is-stepped .q-later{display:none !important}
+.q-enter{animation:qIn .35s ease}
+@keyframes qIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.q-skip{align-self:flex-start;margin-top:8px;padding:0;border:0;background:none;color:#7A5B22;font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer}
+.q-skip:hover{color:#0A100D}
+@media (prefers-reduced-motion:reduce){.q-enter{animation:none}}

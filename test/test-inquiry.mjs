@@ -48,7 +48,7 @@ const text = scopeText(q);
 writeFileSync(new URL('./scope-of-work-preview.txt', import.meta.url), text);
 check(/^SERVICES\n• Strike crew/.test(text) && text.includes('STRIKE\nStrike can start: 10:00 PM') && text.includes('Venue hard out: 11:30 PM'), 'Scope of Work has headings + 12-hour times');
 check(text.includes('Linen drop spot: Venue garage by the dock') && text.includes('TRUCKING + ACCESS') && text.includes('FABRICATION\nWhat to build: Suspended hoop') && text.includes('Needed by: Sun, May 30, 2027'), 'every answered section is included');
-check(!text.includes('INSTALL + SET-UP') && !text.includes('HOLIDAY') && !text.includes('Walkthrough'), 'unanswered sections and blanks left out');
+check(!text.includes('INSTALL + SET-UP') && !text.includes('RIGGING') && !text.includes('HOLIDAY') && !text.includes('Walkthrough'), 'unanswered sections and blanks left out');
 check(text.includes('THEIR NOTES\nLast time') && text.includes('DOCUMENTS\nrun-of-show.pdf') && text.includes('Agreed: quote is a preliminary estimate'), 'notes, documents + agreement included');
 
 const f = airtableFields(q);
@@ -70,6 +70,33 @@ const email = calls.find((c) => c.url.includes('resend'));
 check(email && email.body.reply_to === 'jordan@example.com' && email.body.to[0] === 'inquire@jerseystrike.com' && email.body.text.includes('STRIKE'), 'reply-to is the client; text email has the details');
 const at = calls.find((c) => c.url.includes('airtable'));
 check(at && at.url.endsWith('/appTEST/tblvthafdL2XhCDZt'), 'Airtable record goes to EVENT INQUIRIES + LEADS');
+
+// Rigging-only inquiry.
+const rig = scopeText(normalize({ data: { services: 'Rigging + ladder work only', rig_phase: 'Install + strike', rig_height: 'Over 20 ft / lift needed', rig_start: '08:00', rig_hard_out: '23:30', rig_points: 'Truss (from draping partner); Beams or rafters' } }));
+check(rig.includes('RIGGING + LADDER WORK\nNeeded for: Install + strike') && rig.includes('Install: on site from: 8:00 AM') && rig.includes('Venue hard out: 11:30 PM') && rig.includes('  • Beams or rafters'), 'rigging-only inquiry formats correctly');
+
+// Team worksheet entry.
+const tq = normalize({ form_name: 'team-quote', created_at: '2026-10-25T15:00:00Z', data: {
+  entered_by: 'Michaela', inquiry_source: 'Email', original_message: 'Hi! Need 3 strikers and a van.',
+  business: 'True Floral', contact_name: 'Kate', email: 'kate@example.com', venue: 'Inn at Perry Cabin', event_date: '2027-10-17',
+  services: 'Strike crew', est_crew_hours: '9', est_window: '1', est_crew: '9', vehicle_flag: 'VANessa (E350) or a 15ft box truck required: 15–24 ft work needs ladders over 10 ft, which don’t fit in MINIvan.',
+  missing: 'Your proposal or design deck; How each install is attached (freestanding, tent poles, ceiling, hanging)' } });
+const tt = scopeText(tq), tf = airtableFields(tq);
+check(tq.team && tq.missing.length === 2 && tt.startsWith('TEAM ENTRY\nEntered by: Michaela') && tt.includes('STILL MISSING (follow up)\n• Your proposal') && tt.includes('THEIR ORIGINAL MESSAGE\nHi! Need 3 strikers'), 'team entry: who, gaps + original message in Scope of Work');
+check(tt.includes('OUR READ (INTERNAL)\nCrew-hours needed: 9') && tt.includes('Vehicle: VANessa') && !tt.includes('Agreed:'), 'team entry: our read + vehicle flag, no client agreement line');
+check(tf.Status === 'NEED REPLY' && tf.Notes.startsWith('Entered by Michaela from an email inquiry') && subjectFor(tq).startsWith('Team entry:'), 'team entry: status, notes + subject');
+check(airtableFields(normalize({ form_name: 'team-quote', data: { business: 'X', services: 'Rentals' } })).Status === 'NEED QUOTE', 'team entry with nothing missing goes to NEED QUOTE');
+check(renderEmail(tq).includes('Still missing: follow up') && renderEmail(tq).includes('Team entry · Michaela'), 'team entry email shows the gap list');
+
+// Phase 2 hand-off: with ANTHROPIC_API_KEY set, the quote draft is started with the record id.
+calls.length = 0;
+globalThis.fetch = async (url, opts) => { calls.push({ url, body: JSON.parse(opts.body), headers: opts.headers });
+  return new Response(url.includes('airtable') ? JSON.stringify({ records: [{ id: 'recABC' }] }) : '{}', { status: url.includes('draft-quote') ? 202 : 200 }); };
+process.env.ANTHROPIC_API_KEY = 'test-key';
+await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify(sample) }));
+const qd = calls.find((c) => c.url.includes('draft-quote-background'));
+check(qd && qd.body.recordId === 'recABC' && qd.headers['x-quote-secret'] && qd.body.inquiry.scope.includes('STRIKE\nStrike can start: 10:00 PM') && qd.body.inquiry.business === 'Wile Events', 'quote draft started with record id + full scope');
+delete process.env.ANTHROPIC_API_KEY;
 
 // Missing optional columns are skipped; a missing Scope of Work column moves the details into Notes.
 calls.length = 0; let n = 0;
@@ -93,7 +120,7 @@ check(last.body.records[0].fields['Services'] === 'Strike crew, Trucking + deliv
 // Other forms are ignored.
 calls.length = 0;
 await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify({ payload: { form_name: 'other', data: {} } }) }));
-check(calls.length === 0, 'non-inquiry forms are ignored');
+check(calls.length === 0, 'other forms are ignored');
 
 console.log(ok ? '\nAll checks passed. Previews: test/email-preview.html, test/scope-of-work-preview.txt' : '\nSome checks failed.');
 process.exit(ok ? 0 : 1);

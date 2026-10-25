@@ -18,7 +18,20 @@ function prettyDate(iso) {
 
 export function quoteSubject(q, priced) {
   const when = prettyDate(q.eventDate).replace(/^\w+, /, '');
-  return `Draft quote ${fmt(priced.total)}: ${q.business || q.contact || 'New inquiry'} · ${when}`;
+  const fab = priced.fabs?.length ? '[Alyssa: check fab with Larry] ' : '';
+  return `${fab}Draft quote ${fmt(priced.total)}: ${q.business || q.contact || 'New inquiry'} · ${when}`;
+}
+
+function fabSection(priced) {
+  if (!priced.fabs?.length) return '';
+  return priced.fabs.map((f) => `<div style="margin:0 0 14px;padding:12px;border:1px solid #D8B46A;border-radius:10px;background:#FBF4E2">
+<div style="font-weight:700">${esc(f.label)} · ${fmt(f.amount)} <span style="font-weight:400;color:#7A6F55">(${esc(f.confidence)} confidence)</span></div>
+${f.description ? `<div style="margin-top:4px">${esc(f.description)}</div>` : ''}
+<div style="margin-top:6px;font-size:13px;color:#5C574A">Materials ~${fmt(f.materials_cost)}${f.materials_breakdown ? ` (${esc(f.materials_breakdown)})` : ''} · ${esc(f.shop_hours)} shop hrs${f.comparable ? ` · Comparable: ${esc(f.comparable)}` : ''}</div>
+${f.flags?.length ? `<div style="margin-top:8px"><b>My flags:</b><ul style="margin:4px 0 0;padding-left:18px">${f.flags.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+${f.questions_for_larry?.length ? `<div style="margin-top:8px"><b>Questions for Larry:</b><ul style="margin:4px 0 0;padding-left:18px">${f.questions_for_larry.map((x) => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+${f.reusable ? `<div style="margin-top:8px"><b>Keep as a rental?</b> ${esc(f.reusable)}</div>` : ''}
+</div>`).join('') + '<div style="font-size:13px;color:#5C574A">Let me know what you and Larry think. Reply with corrections and I\'ll fold them into future fab estimates.</div>';
 }
 
 export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = [], recordUrl = '' }) {
@@ -85,12 +98,18 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
 </td></tr>
 ${section('Summary', esc(plan.summary))}
 ${section('Quote breakdown', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">${lineRows}${totals}</table><div style="margin-top:10px;font-size:12px;color:#7A6F55;font-style:italic">${esc(FOOTER)}</div>`)}
+${priced.margin ? section('Margin check (internal)', `<div style="font-size:15px"><b>${priced.margin.pct}% gross margin</b> · ${esc(priced.margin.verdict)} (target ${priced.margin.target}%)</div>
+<div style="margin-top:4px;color:#5C574A">Revenue ${fmt(priced.total)} − est. cost ${fmt(priced.margin.cost)} = ${fmt(priced.margin.gp)} gross profit.${priced.margin.pct < priced.margin.target ? ` ${fmt(priced.margin.neededTotal)} would hit 50%.` : ''}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:12px;color:#5C574A">${priced.margin.costs.map((c) => `<tr><td style="padding:2px 0">${esc(c.what)}</td><td style="padding:2px 0;text-align:right">${fmt(c.amount)}</td></tr>`).join('')}</table>
+<div style="margin-top:6px;font-size:12px;color:#7A6F55">Team pay $30/hr ($45 major holidays) incl. ~1 hr home↔HQ drive per person per call; fuel $0.70/mi; pass-throughs at cost. Excludes payroll taxes/insurance (covered by base fee + admin).</div>`) : ''}
+${priced.fabs?.length ? section('Fabrication: Alyssa, check with Larry', fabSection(priced)) : ''}
 ${section('Red flags', list(flags, '#8A2E1F'))}
 ${section('Missing info', list(plan.missing_info) + asks)}
 ${section('Timeline', timeline || '<span style="color:#A8A391">None</span>')}
 ${zones ? section('Zones + team', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px"><tr><td style="${td};color:${gold}">Zone</td><td style="${td};color:${gold}">Tasks</td><td style="${td};color:${gold};text-align:center">Team</td></tr>${zones}</table>`) : ''}
 ${section('Logistics', list([...(plan.logistics_notes || []), ...(routes?.notes || [])]) + legs + (uhaul ? `<div style="margin-top:12px">${uhaul}</div>` : ''))}
 ${section('Reasoning', list([...(plan.reasoning || []), ...(plan.base_fee_note ? [`Base fee: ${plan.base_fee_note}`] : [])]))}
+${plan.client_history || plan.lean_option ? section('Client history', `${esc(plan.client_history || '')}${plan.lean_option ? `<div style="margin-top:8px"><b>Leaner option:</b> ${esc(plan.lean_option)}</div>` : ''}`) : ''}
 ${section('Similar past jobs', list(similar))}
 ${plan.task_list?.length ? section('Task list', list(plan.task_list)) : ''}
 ${section('Inquiry', `<b>Contact:</b> ${esc(q.contact)} · ${esc(q.email)} · ${esc(q.phone)}<br><b>Studio:</b> ${esc(q.studio || 'Not provided')}<br><b>Services:</b> ${esc((q.services || []).join(', '))}<br><b>Team size (theirs):</b> ${esc(q.teamSize || '—')} · <b>Needs:</b> ${esc((q.teamNeeds || []).join(', '))}<br><b>Vehicles (theirs):</b> ${esc((q.vehicles || []).join(', '))}<br><b>Scope:</b> ${esc(q.scope).replace(/\n/g, '<br>')}<br><b>Documents:</b> ${(q.files || []).map((f) => `<a href="${esc(f.url)}" style="color:#0A100D">${esc(f.filename)}</a>`).join(', ') || 'None'}${docNotes.length ? `<div style="color:#8A2E1F;margin-top:6px">${docNotes.map(esc).join('<br>')}</div>` : ''}`)}
@@ -114,6 +133,7 @@ export function renderQuoteText({ inquiry: q, plan, priced, routes }) {
     for (const st of s.steps || []) L.push(`  ${st.time} - ${st.label}`);
   }
   if (plan.zones?.length) { L.push('', 'ZONES'); for (const z of plan.zones) L.push(`- ${z.name} (${z.team}): ${z.tasks || ''}`); }
+  if (priced.margin) L.push('', `MARGIN: ${priced.margin.pct}% gross (${priced.margin.verdict}; target 50%). Cost ~${fmt(priced.margin.cost)}${priced.margin.pct < 50 ? `; ${fmt(priced.margin.neededTotal)} hits 50%` : ''}.`);
   if (priced.uhauls.length) { L.push('', 'U-HAUL'); for (const u of priced.uhauls) L.push(`- ${u.label}: A ${fmt(u.a.amount)} vs B ${fmt(u.b.amount)}. ${u.why}`); }
   if (routes?.hq) L.push('', `Routing: ${routes.hq.name} HQ, ${routes.miles} mi / ${routes.minutes} min loop.`);
   if (plan.task_list?.length) { L.push('', 'TASK LIST'); for (const t of plan.task_list) L.push(`- ${t}`); }
@@ -128,6 +148,10 @@ export function renderFlagsText({ plan, priced, routes, docNotes = [] }) {
     ...sec('ASK THE CLIENT', plan.client_questions),
     ...sec('LOGISTICS', [...(plan.logistics_notes || []), ...(routes?.notes || []), ...docNotes]),
     ...sec('REASONING', [...(plan.reasoning || []), ...(plan.base_fee_note ? [`Base fee: ${plan.base_fee_note}`] : [])]),
+    ...sec('FABRICATION (check with Larry)', (priced.fabs || []).flatMap((f) => [
+      `${f.label}: ${fmt(f.amount)} (${f.confidence} confidence). Materials ~${fmt(f.materials_cost)}, ${f.shop_hours} shop hrs.${f.comparable ? ` Comparable: ${f.comparable}.` : ''}`,
+      ...(f.flags || []).map((x) => `  flag: ${x}`), ...(f.questions_for_larry || []).map((x) => `  ask Larry: ${x}`), ...(f.reusable ? [`  rental later: ${f.reusable}`] : [])])),
+    ...sec('CLIENT HISTORY', [plan.client_history, plan.lean_option && `Leaner option: ${plan.lean_option}`].filter(Boolean)),
     ...sec('SIMILAR PAST JOBS', (plan.similar_jobs || []).map((j) => `${j.job}${j.charged ? ` (${j.charged})` : ''}: ${j.why}`)),
   ].join('\n').trim();
 }
