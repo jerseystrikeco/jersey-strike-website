@@ -33,3 +33,8 @@ button[type=submit][disabled]{opacity:.6;cursor:progress}
 .build-dialog::backdrop{background:rgba(10,16,13,.75)}
 .build-dialog[open]{display:block}
 @media (max-width:640px){.build-dialog img{max-height:42vh !important}}
+
+fieldset[hidden]{display:none !important}
+.form-section{animation:fsIn .25s ease}
+@keyframes fsIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.form-section{animation:none}}

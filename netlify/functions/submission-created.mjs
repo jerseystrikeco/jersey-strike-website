@@ -46,6 +46,113 @@ const OPTIONAL = {
 };
 const DEFAULT_TABLE = 'tblvthafdL2XhCDZt';
 
+// Everything else the form asks, grouped the way it reads in the email and in
+// Airtable's "Scope of Work" column. [form field, label, kind]. Add a line here
+// when you add a question to the form; blank answers are left out.
+const DETAILS = [
+  ['Event', [
+    ['planner_contact', 'Planner / day-of contact'],
+    ['guest_count', 'Guests'],
+    ['table_count', 'Tables'],
+    ['event_budget', 'Floral + decor budget'],
+  ]],
+  ['Installs on site', [
+    ['install_count', 'Large installs'],
+    ['install_height', 'Tallest install'],
+    ['install_attach', 'Attached to', 'list'],
+    ['tools_detail', 'Tools left on site'],
+  ]],
+  ['Strike', [
+    ['strike_start', 'Strike can start', 'time'],
+    ['hard_out', 'Venue hard out', 'time'],
+    ['breakdown', 'Breakdown includes', 'list'],
+    ['linens', 'Linens'],
+    ['linen_dropoff', 'Linen drop spot'],
+    ['linen_bags', 'Linen bags'],
+    ['other_rentals', 'Other vendors’ rentals'],
+    ['client_staff', 'Their staff on site'],
+  ]],
+  ['Install + set-up', [
+    ['load_in', 'Load-in can start', 'time'],
+    ['ready_by', 'Must be finished by', 'time'],
+    ['flip', 'Room flip'],
+    ['built', 'Pieces arrive'],
+    ['team_needs', 'Team needs', 'list'],
+  ]],
+  ['Holiday install support', [
+    ['holiday_start', 'Install starts', 'date'],
+    ['holiday_end', 'Install ends', 'date'],
+    ['holiday_sites', 'Sites'],
+    ['holiday_property', 'Site type'],
+    ['holiday_scope', 'Installing', 'list'],
+    ['holiday_height', 'Highest work'],
+    ['holiday_deinstall', 'De-install', 'date'],
+  ]],
+  ['Trucking + access', [
+    ['truck', 'Truck'],
+    ['vehicles', 'Vehicles', 'list'],
+    ['studio_address', 'Studio pickup / return'],
+    ['access', 'Access', 'list'],
+    ['load_size', 'Rough load'],
+  ]],
+  ['Fabrication', [
+    ['fab_description', 'What to build'],
+    ['fab_needed_by', 'Needed by', 'date'],
+  ]],
+  ['Rentals', [
+    ['rental_items', 'Items'],
+    ['rental_handoff', 'Pickup / delivery'],
+  ]],
+  ['Links', [
+    ['docs_link', 'Files', 'link'],
+    ['walkthrough_link', 'Walkthrough video / photos', 'link'],
+  ]],
+];
+
+function prettyTime(v) {
+  const m = /^(\d{1,2}):(\d{2})/.exec(v || '');
+  if (!m) return v;
+  const h = Number(m[1]);
+  return `${((h + 11) % 12) + 1}:${m[2]} ${h < 12 ? 'AM' : 'PM'}`;
+}
+
+// The answered questions, as [{ title, rows: [{ label, value, kind }] }].
+export function detailSections(q) {
+  return DETAILS.map(([title, fields]) => ({
+    title,
+    rows: fields
+      .map(([key, label, kind]) => {
+        const raw = q.raw[key];
+        if (kind === 'list') {
+          const items = q.lists[key] || [];
+          return items.length ? { label, value: items, kind } : null;
+        }
+        if (!raw) return null;
+        const value = kind === 'time' ? prettyTime(raw) : kind === 'date' ? prettyDate(raw) : raw;
+        return { label, value, kind };
+      })
+      .filter(Boolean),
+  })).filter((sec) => sec.rows.length);
+}
+
+// Plain-text version for Airtable's Scope of Work column and the text email.
+export function scopeText(q) {
+  const out = [];
+  if (q.services.length) out.push('SERVICES', ...q.services.map((x) => `• ${x}`), '');
+  for (const sec of detailSections(q)) {
+    out.push(sec.title.toUpperCase());
+    for (const r of sec.rows) {
+      if (r.kind === 'list') out.push(`${r.label}:`, ...r.value.map((x) => `  • ${x}`));
+      else out.push(`${r.label}: ${r.value}`);
+    }
+    out.push('');
+  }
+  if (q.scope) out.push('THEIR NOTES', q.scope, '');
+  if (q.files.length) out.push('DOCUMENTS', ...q.files.map((f) => `${f.filename}: ${f.url}`), '');
+  if (q.acknowledged) out.push('Agreed: quote is a preliminary estimate; added hours/team billed if scope changes (timeline, collection list, delivery locations); final details due 14 days out.');
+  return out.join('\n').trim();
+}
+
 export default async (req) => {
   let payload;
   try {
@@ -70,11 +177,12 @@ export default async (req) => {
 export function normalize(payload) {
   const d = payload.data || {};
   const s = (v) => (typeof v === 'string' ? v.trim() : v == null ? '' : String(v).trim());
+  // Multi-selects arrive as one value joined with "; " (older form versions used ", ").
   const list = (v) =>
-    (Array.isArray(v) ? v : s(v).split(','))
+    (Array.isArray(v) ? v : s(v).split(s(v).includes(';') ? ';' : ','))
       .map((x) => s(x))
       .filter(Boolean);
-  const files = ['document_1', 'document_2', 'document_3']
+  const files = ['document_1', 'document_2', 'document_3', 'document_4', 'document_5', 'document_6']
     .map((k) => d[k])
     .filter((f) => f && (typeof f === 'string' ? f : f.url))
     .map((f) =>
@@ -98,7 +206,11 @@ export function normalize(payload) {
     vehicles: list(d.vehicles),
     scope: s(d.scope),
     source: s(d.source_page),
+    acknowledged: /^(yes|on|true)$/i.test(s(d.acknowledged)),
     files,
+    // Every answer, for the grouped details (see DETAILS).
+    raw: Object.fromEntries(Object.entries(d).map(([k, v]) => [k, typeof v === 'object' ? '' : s(v)])),
+    lists: Object.fromEntries(DETAILS.flatMap(([, fs]) => fs.filter((x) => x[2] === 'list').map(([k]) => [k, list(d[k])]))),
   };
 }
 
@@ -141,9 +253,14 @@ export function renderEmail(q) {
   const map = q.venue ? ` · <a href="https://maps.google.com/?q=${encodeURIComponent(q.venue)}" style="color:#9A7838">Map</a>` : '';
   const docs = q.files.length
     ? q.files.map((f) => `<a href="${esc(f.url)}" style="color:#0A100D">${esc(f.filename)}</a>`).join('<br>') +
-      '<div style="margin-top:6px;font-size:12px;color:#7A6F55">Download links may expire. Copies are saved in Netlify &gt; Forms (and in Airtable if you add a Documents column).</div>'
+      '<div style="margin-top:6px;font-size:12px;color:#7A6F55">Download links may expire. Copies are saved in Airtable (Documents) and Netlify &gt; Forms.</div>'
     : '';
   const scope = q.scope ? esc(q.scope).replace(/\n/g, '<br>') : '';
+  const details = detailSections(q);
+  const detailRows = (sec) =>
+    (sec ? sec.rows : [])
+      .map((r) => row(r.label, r.kind === 'list' ? chips(r.value) : r.kind === 'link' ? `<a href="${esc(r.value)}" style="color:#0A100D;word-break:break-all">${esc(r.value)}</a>` : esc(r.value).replace(/\n/g, '<br>')))
+      .join('');
 
   return `<!doctype html><html><body style="margin:0;padding:0;background:#EFE9DC">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EFE9DC;padding:24px 12px"><tr><td align="center">
@@ -159,12 +276,13 @@ export function renderEmail(q) {
 <div style="margin-top:14px">${q.email ? `<a href="mailto:${esc(q.email)}?subject=${encodeURIComponent('Re: ' + subjectFor(q))}" style="display:inline-block;padding:10px 18px;border-radius:999px;background:#0A100D;color:#F4EEDF;text-decoration:none;font-size:14px;font-weight:700">Reply to ${esc(q.contact || 'client')}</a>` : ''}</div>
 </td></tr>
 ${section('Contact', row('Business', esc(q.business)) + row('Point of contact', esc(q.contact)) + row('Email', mail) + row('Phone', tel))}
-${section('Event', row('Event date', esc(prettyDate(q.eventDate))) + row('Venue', esc(q.venue) + map) + row('Studio pickup / delivery', esc(q.studio)))}
-${section('Scope', row('Services', chips(q.services)) + row('Est. team size', esc(q.teamSize)) + row('Team needs', chips(q.teamNeeds)) + row('Vehicles', chips(q.vehicles)))}
-${section('Scope of work', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.55">${scope || '<span style="color:#A8A391">Not provided</span>'}</td></tr>`)}
+${section('Event', row('Date', esc(prettyDate(q.eventDate))) + row('Venue / site', esc(q.venue) + map) + detailRows(details.find((x) => x.title === 'Event')))}
+${section('Services', `<tr><td style="padding:10px 0 4px">${chips(q.services) || '<span style="color:#A8A391">Not provided</span>'}</td></tr>`)}
+${details.filter((x) => x.title !== 'Event').map((sec) => section(sec.title, detailRows(sec))).join('\n')}
+${section('Their notes', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.55">${scope || '<span style="color:#A8A391">Not provided</span>'}</td></tr>`)}
 ${section('Documents', `<tr><td style="padding:10px 0;font-size:15px;line-height:1.7">${docs || '<span style="color:#A8A391">No files uploaded</span>'}</td></tr>`)}
 <tr><td style="padding:24px 28px;font-size:12px;color:#7A6F55;border-top:1px solid #E2D9C4">
-Submitted ${esc(new Date(q.received).toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' }))} ET from ${esc(SITE + (q.source || ''))}. Also saved to EVENT INQUIRIES + LEADS in Airtable.
+${q.acknowledged ? 'Agreed to the preliminary-estimate, scope-change billing and 14-day terms. ' : ''}Submitted ${esc(new Date(q.received).toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short' }))} ET from ${esc(SITE + (q.source || ''))}. Also saved to EVENT INQUIRIES + LEADS in Airtable.
 </td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -173,10 +291,8 @@ export function renderText(q) {
   return [
     subjectFor(q), '',
     `Business: ${q.business}`, `Contact: ${q.contact}`, `Email: ${q.email}`, `Phone: ${q.phone}`, '',
-    `Event date: ${prettyDate(q.eventDate)}`, `Venue: ${q.venue}`, `Studio pickup/delivery: ${q.studio}`, '',
-    `Services: ${q.services.join(', ')}`, `Est. team size: ${q.teamSize}`, `Team needs: ${q.teamNeeds.join(', ')}`, `Vehicles: ${q.vehicles.join(', ')}`, '',
-    'Scope of work:', q.scope, '',
-    'Documents:', ...q.files.map((f) => `${f.filename}: ${f.url}`),
+    `Event date: ${prettyDate(q.eventDate)}`, `Venue / site: ${q.venue}`, '',
+    scopeText(q),
   ].join('\n');
 }
 
@@ -203,19 +319,8 @@ async function sendEmail(q) {
 // ---------- Airtable ----------
 
 function notesText(q) {
-  const lines = [
-    `Website inquiry ${new Date(q.received).toLocaleDateString('en-US', { timeZone: 'America/New_York' })}`,
-    q.email && `Email: ${q.email}`,
-    q.phone && `Phone: ${q.phone}`,
-    q.venue && `Venue: ${q.venue}`,
-    q.services.length && `Services: ${q.services.join(', ')}`,
-    q.teamSize && `Est. team size: ${q.teamSize}`,
-    q.teamNeeds.length && `Team needs: ${q.teamNeeds.join(', ')}`,
-    q.vehicles.length && `Vehicles: ${q.vehicles.join(', ')}`,
-    q.scope && `\nScope of work:\n${q.scope}`,
-    q.files.length && `\nDocuments:\n${q.files.map((f) => `${f.filename}: ${f.url}`).join('\n')}`,
-  ];
-  return lines.filter(Boolean).join('\n');
+  const when = new Date(q.received).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
+  return `Website inquiry ${when}. Full details in Scope of Work.`;
 }
 
 export function airtableFields(q) {
@@ -237,7 +342,7 @@ export function airtableFields(q) {
     [OPTIONAL.services]: q.services,
     [OPTIONAL.teamNeeds]: q.teamNeeds,
     [OPTIONAL.vehicles]: q.vehicles,
-    [OPTIONAL.scope]: q.scope,
+    [OPTIONAL.scope]: scopeText(q),
   };
   const n = parseInt(q.teamSize, 10);
   if (!Number.isNaN(n)) opt[OPTIONAL.teamSize] = n;
@@ -256,7 +361,7 @@ async function saveToAirtable(q) {
   if (!token || !base) throw new Error('AIRTABLE_TOKEN or AIRTABLE_BASE_ID is not set');
   const fields = airtableFields(q);
   // Try to save; if Airtable says an optional column doesn't exist (or won't
-  // accept the value), drop that column and try again. Notes always has everything.
+  // accept the value), drop that column and try again.
   for (let attempt = 0; attempt < 12; attempt++) {
     const r = await fetch(`https://api.airtable.com/v0/${base}/${encodeURIComponent(table)}`, {
       method: 'POST',
@@ -273,6 +378,8 @@ async function saveToAirtable(q) {
       if (Array.isArray(fields[bad]) && bad !== OPTIONAL.documents) { fields[bad] = fields[bad].join(', '); continue; }
       if (typeof fields[bad] === 'number') { fields[bad] = String(fields[bad]); continue; }
       console.log(`[inquiry] skipping Airtable column "${bad}" (${msg.slice(0, 120)})`);
+      // Never lose the scope: if that column is missing, put it in Notes instead.
+      if (bad === OPTIONAL.scope) fields[F.notes] = `${fields[F.notes]}\n\n${fields[bad]}`;
       delete fields[bad];
       continue;
     }

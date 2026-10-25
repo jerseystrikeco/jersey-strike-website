@@ -1,0 +1,40 @@
+{
+  "summary": "Two-day Stone Harbor weekend for Wile Events: welcome party at Stone Harbor Golf Club Friday and the Jamie x Greg wedding at The Reeds Saturday, with studio processing, install, flip, night strikes and a Monday studio return. Recommend a team of 2 Friday (van), 4 for the wedding install with a 26ft U-Haul parked near the venue for the strike crew of 3.",
+  "job_type": "full_service",
+  "hq": "Forked River",
+  "zones": [
+    { "name": "Welcome party", "tasks": "Entry path lanterns (24), raffle display, 2 bar statements, credenza, high/low tops, fireplace", "team": 2 },
+    { "name": "Ceremony", "tasks": "Altar ground gardens (3× 11\", 4× 9\" Lomey, 4 trays) + 14 aisle tray meadows", "team": 2, "notes": "Highest-touch zone; done by 3:00pm photo ready" },
+    { "name": "Cocktail hour", "tasks": "Seating chart wall insert, 2 bars, 8 low tops, 4 high tops, gift table, welcome sign", "team": 1 },
+    { "name": "Reception", "tasks": "Sweetheart, 16 guest tables in 4 designs (~300 rental pieces), cake, 2 satellite bars", "team": 2, "notes": "Shares crew with cocktail once ceremony is done" },
+    { "name": "Flip", "tasks": "Altar front pieces → sweetheart floor; aisle meadows → stage front", "team": 2, "notes": "4:15–5:30pm after ceremony" }
+  ],
+  "shifts": [
+    { "label": "Welcome Party Install", "date": "Fri 10/23/26", "kind": "install", "team_size": 2, "roles": "1 Detail Muscle + 1 Designer", "depart_hq": "12:30pm", "back_hq": "7:30pm", "venue_day": true,
+      "steps": [ {"time":"12:30pm","label":"Team departs HQ"}, {"time":"1:30pm","label":"Arrive at studio, load van"}, {"time":"2:00pm","label":"Loading complete, depart for venue"}, {"time":"3:45pm","label":"Arrive at venue"}, {"time":"4:00pm","label":"Load in / install"}, {"time":"6:00pm","label":"Photo ready"}, {"time":"6:30pm","label":"Backload van, depart"}, {"time":"7:30pm","label":"Back at HQ"} ] },
+    { "label": "Welcome Party Strike", "date": "Fri 10/23/26", "kind": "strike", "team_size": 2, "depart_hq": "8:30pm", "back_hq": "12:30am",
+      "steps": [ {"time":"8:30pm","label":"Depart HQ"}, {"time":"9:45pm","label":"Arrive + prep for strike"}, {"time":"10:00pm","label":"Strike"}, {"time":"11:00pm","label":"Backload, depart"}, {"time":"12:30am","label":"Back at HQ"} ] },
+    { "label": "Wedding Install + Flip", "date": "Sat 10/24/26", "kind": "install", "team_size": 4, "roles": "3 Detail Muscle + 1 Designer", "depart_hq": "6:15am", "back_hq": "7:30pm", "venue_day": true,
+      "steps": [ {"time":"6:15am","label":"Team departs HQ"}, {"time":"7:15am","label":"Arrive at studio, load 26ft truck (Friday rentals returned)"}, {"time":"8:00am","label":"Loading complete, depart"}, {"time":"9:45am","label":"Arrive at The Reeds"}, {"time":"10:00am","label":"Load in ceremony + reception"}, {"time":"3:00pm","label":"Ceremony photo ready"}, {"time":"4:30pm","label":"Reception photo ready, backload/store"}, {"time":"5:30pm","label":"Flip ceremony → reception"}, {"time":"6:30pm","label":"Done on property, depart"}, {"time":"7:30pm","label":"Back at HQ"} ] },
+    { "label": "Wedding Strike", "date": "Sat 10/24/26", "kind": "strike", "team_size": 3, "depart_hq": "8:30pm", "back_hq": "1:30am",
+      "steps": [ {"time":"8:30pm","label":"Depart HQ"}, {"time":"9:45pm","label":"Arrive + prep (truck parked near venue)"}, {"time":"10:00pm","label":"Strike"}, {"time":"12:00am","label":"Pack + strap truck, depart"}, {"time":"1:30am","label":"Back at HQ"} ] },
+    { "label": "Monday Studio Return", "date": "Mon 10/26/26", "kind": "return", "team_size": 1, "depart_hq": "9:00am", "back_hq": "1:00pm",
+      "steps": [ {"time":"9:00am","label":"Depart for studio"}, {"time":"10:00am","label":"Unload with studio team"}, {"time":"11:00am","label":"Depart"}, {"time":"12:00pm","label":"Return U-Haul"}, {"time":"1:00pm","label":"Back at HQ"} ] }
+  ],
+  "studio_days": [ {"label":"Studio processing","date":"Tue 10/20/26","people":2}, {"label":"Studio day","date":"Thu 10/22/26","people":1}, {"label":"Studio reset","date":"Mon 10/26/26","people":2} ],
+  "vehicles": [
+    { "kind": "van", "label": "Welcome Party: JS van", "count": 1, "round_trip_miles": 220, "trips": 1 },
+    { "kind": "uhaul", "label": "Wedding: 26ft box truck", "count": 1, "round_trip_miles": 220, "trips": 1, "rental_days": 3, "uhaul_miles": 200, "notes": "Stays parked near the venue for the strike team; returned Monday" }
+  ],
+  "equipment": { "ladders": 0, "skyscraper_ladders": 0, "rigging_kit": false },
+  "travel": { "tolls": 0, "meal_person_days": 0 },
+  "base_fee_days": 2,
+  "base_fee_note": "Friday and Saturday on site. Monday studio return is a next-day delivery for team safety after a 1:30am strike, so no extra base fee.",
+  "logistics_notes": [ "~300 rental pieces (29 lamps, 136 votives, 52 tapers, 2 candelabra) fill a 26ft truck; load ~1–1.25 hr with 4.", "Friday rentals ride back to the studio and go out again on Saturday's truck.", "Garden State Parkway south of exit 105 allows trucks; confirm the route to Stone Harbor." ],
+  "reasoning": [ "Ceremony is the heaviest zone (21 ground pieces) and must be photo ready by 3pm, so 2 people there.", "Cocktail + reception share 2 people once the ceremony is done; 4 total fits the 10am–4:30pm window.", "Strike: ~300 pieces in a 2-hour window with careful packing needs 3." ],
+  "red_flags": [ "Timeline shows a team of 3 for the wedding install but the zones need 4.", "No breakdown hard stop listed: confirm with The Reeds." ],
+  "missing_info": [ "Loading dock / parking at The Reeds for a 26ft truck", "Who unloads at the studio Monday" ],
+  "client_questions": [ "Is there a dock or a spot to leave a 26ft truck overnight near The Reeds?" ],
+  "similar_jobs": [ { "job": "Wile · Jamie x Greg (Oct 2026)", "charged": "$10,092.39", "why": "Same client and venue type; reference job" } ],
+  "task_list": [ "Welcome party: 2 ground meadows, 3 LG bar statements, 15 pin frog dishes + lamps, 10 small arrangements", "Ceremony gardens + aisle gardens", "1 escort card, 2 bar, 8 low top, 4 high top", "Sweetheart, 4 compote, 3 candelabra, 4 elevated, 4 garden, cake blooms" ]
+}

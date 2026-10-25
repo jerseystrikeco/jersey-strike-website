@@ -1,9 +1,9 @@
 // Local test for the inquiry automation. Run: npm test
 // Sends a sample submission through the function with fake email/Airtable
-// endpoints, checks what would be sent, and writes a preview of the email
-// to test/email-preview.html. Nothing real is emailed or saved.
+// endpoints, checks what would be sent, and writes previews of the email and
+// the Airtable Scope of Work text to test/. Nothing real is emailed or saved.
 import { writeFileSync } from 'node:fs';
-import handler, { normalize, airtableFields, subjectFor, renderEmail } from '../netlify/functions/submission-created.mjs';
+import handler, { normalize, airtableFields, subjectFor, renderEmail, scopeText } from '../netlify/functions/submission-created.mjs';
 
 const sample = {
   payload: {
@@ -11,21 +11,27 @@ const sample = {
     id: 'test-123',
     created_at: '2026-10-24T15:30:00.000Z',
     data: {
-      business: 'Wile Events',
-      contact_name: 'Jordan Wile',
-      email: 'jordan@example.com',
-      phone: '(555) 010-2030',
-      event_date: '2027-06-12',
-      venue: 'Turning Stone Resort Casino, Verona NY',
-      studio_address: '12 Studio Lane, Red Bank, NJ',
-      services: 'Install + strike crew, Custom fabrication',
-      team_size: '8',
-      team_needs: 'Designers, High ladder work, Box truck driving',
-      vehicles: '26ft Box Truck, 1 Van',
-      scope: 'Ceremony arch + suspended floral ceiling.\nLoad-in 9am, strike by midnight.',
-      source_page: '/inquire/',
+      business: 'Wile Events', contact_name: 'Jordan Wile', email: 'jordan@example.com', phone: '(555) 010-2030',
+      planner_contact: 'Lauren, Ever After Events, (555) 010-4455',
+      event_date: '2027-06-12', venue: 'Turning Stone Resort Casino, Verona NY',
+      guest_count: '220', table_count: '24', event_budget: '$40k–$75k',
+      services: 'Strike crew; Trucking + delivery; Custom fabrication',
+      install_count: '4', install_height: '12–20 ft', install_attach: 'Tent poles; Chandeliers / hanging',
+      tools_detail: 'Drill + bits, hex key for arch bolts; bridal suite closet',
+      strike_start: '22:00', hard_out: '23:30',
+      breakdown: 'Leave all flowers in vessels, bring back whole; Dispose of candles; Load your truck',
+      linens: 'Bag, count + leave on site', linen_dropoff: 'Venue garage by the dock', linen_bags: 'Rental company bags will be on site',
+      other_rentals: 'Yes, leave them in place', client_staff: '2',
+      truck: 'Client-provided truck, Jersey Strike drives + loads', vehicles: '26ft Box Truck', studio_address: '12 Studio Lane, Red Bank, NJ',
+      access: 'Loading dock; Long push (100 ft+)', load_size: '12 urns, 4 tree frames, largest 14 ft',
+      fab_description: 'Suspended hoop, 8 ft diameter', fab_needed_by: '2027-05-30',
+      docs_link: 'https://drive.example.com/deck', walkthrough_link: '',
+      scope: 'Last time the strike ran long because of the trees.',
+      acknowledged: 'Yes', source_page: '/inquire/',
       document_1: { url: 'https://example.com/files/run-of-show.pdf', filename: 'run-of-show.pdf', size: 1200 },
       document_2: '',
+      document_5: { url: 'https://example.com/files/flower-order.xlsx', filename: 'flower-order.xlsx', size: 900 },
+      // fields from a section they didn't pick are disabled and never sent
     },
   },
 };
@@ -34,17 +40,24 @@ let ok = true;
 const check = (cond, msg) => { console.log(`${cond ? 'PASS' : 'FAIL'}  ${msg}`); if (!cond) ok = false; };
 
 const q = normalize(sample.payload);
-check(q.services.length === 2 && q.teamNeeds.includes('High ladder work'), 'multi-selects split into lists');
-check(q.files.length === 1 && q.files[0].filename === 'run-of-show.pdf', 'uploaded files picked up, empty ones skipped');
+check(normalize({ data: { services: 'Strike crew, Rentals' } }).services.length === 2 && q.services.length === 3 && q.lists.breakdown.length === 3 && q.lists.breakdown[0] === 'Leave all flowers in vessels, bring back whole', 'multi-selects split into lists (old + new separators)');
+check(q.files.length === 2 && q.files[1].filename === 'flower-order.xlsx', 'all 6 upload slots read, empty ones skipped');
 check(subjectFor(q) === 'New Inquiry: June 12, 2027 at Turning Stone Resort Casino, Verona NY · Wile Events', 'subject line: ' + subjectFor(q));
 
+const text = scopeText(q);
+writeFileSync(new URL('./scope-of-work-preview.txt', import.meta.url), text);
+check(/^SERVICES\n• Strike crew/.test(text) && text.includes('STRIKE\nStrike can start: 10:00 PM') && text.includes('Venue hard out: 11:30 PM'), 'Scope of Work has headings + 12-hour times');
+check(text.includes('Linen drop spot: Venue garage by the dock') && text.includes('TRUCKING + ACCESS') && text.includes('FABRICATION\nWhat to build: Suspended hoop') && text.includes('Needed by: Sun, May 30, 2027'), 'every answered section is included');
+check(!text.includes('INSTALL + SET-UP') && !text.includes('HOLIDAY') && !text.includes('Walkthrough'), 'unanswered sections and blanks left out');
+check(text.includes('THEIR NOTES\nLast time') && text.includes('DOCUMENTS\nrun-of-show.pdf') && text.includes('Agreed: quote is a preliminary estimate'), 'notes, documents + agreement included');
+
 const f = airtableFields(q);
-check(f['Business Name'] === 'Wile Events' && f['Studio Location'] && f['EVENT DATE'] === '2027-06-12' && f['INQUIRY DATE'] === '2026-10-24', 'Airtable core columns match your table');
-check(f['Phone Number'] && f['Estimated Team Size'] === 8 && f['Vehicle Needed'].length === 2 && f['Documents'].length === 1, 'detail columns match your new column names');
-check(f['Fabrication Build'] === true && f['Notes'].includes('High ladder work') && f['Notes'].includes('run-of-show.pdf'), 'Fabrication Build checked + full details in Notes');
+check(f['Business Name'] === 'Wile Events' && f['EVENT DATE'] === '2027-06-12' && f['INQUIRY DATE'] === '2026-10-24' && f['Studio Location'], 'Airtable core columns match your table');
+check(f['Scope of Work'] === text && f['Status'] === 'NEED REPLY' && f['Fabrication Build'] === true, 'Scope of Work gets the formatted details; Status NEED REPLY');
+check(f['Notes'].startsWith('Website inquiry') && f['Notes'].length < 80 && f['Documents'].length === 2, 'Notes stays short; documents attached');
 
 const html = renderEmail(q);
-check(!/undefined|null/.test(html) && html.includes('High ladder work') && html.includes('mailto:jordan@example.com'), 'email renders all sections');
+check(!/undefined|null/.test(html) && html.includes('Breakdown includes') && html.includes('Leave all flowers in vessels') && html.includes('10:00 PM') && html.includes('mailto:jordan@example.com'), 'email renders the grouped sections');
 writeFileSync(new URL('./email-preview.html', import.meta.url), html);
 
 // Full run with fake endpoints.
@@ -54,18 +67,19 @@ Object.assign(process.env, { RESEND_API_KEY: 'test', AIRTABLE_TOKEN: 'test', AIR
 const res = await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify(sample) }));
 check(res.status === 200 && calls.length === 2, 'handler sends one email and one Airtable record');
 const email = calls.find((c) => c.url.includes('resend'));
-check(email && email.body.reply_to === 'jordan@example.com' && email.body.to[0] === 'inquire@jerseystrike.com', 'reply-to is the client, sent to inquiries inbox');
+check(email && email.body.reply_to === 'jordan@example.com' && email.body.to[0] === 'inquire@jerseystrike.com' && email.body.text.includes('STRIKE'), 'reply-to is the client; text email has the details');
 const at = calls.find((c) => c.url.includes('airtable'));
 check(at && at.url.endsWith('/appTEST/tblvthafdL2XhCDZt'), 'Airtable record goes to EVENT INQUIRIES + LEADS');
 
-// Optional columns that don't exist are skipped, not fatal.
+// Missing optional columns are skipped; a missing Scope of Work column moves the details into Notes.
 calls.length = 0; let n = 0;
 globalThis.fetch = async (url, opts) => { const body = JSON.parse(opts.body); calls.push({ url, body });
-  if (url.includes('airtable') && n++ < 2) { const f = Object.keys(body.records[0].fields).find(k => ['Email','Phone Number','Venue','Scope of Work'].includes(k));
-    return new Response(JSON.stringify({ error: { type: 'UNKNOWN_FIELD_NAME', message: `Unknown field name: "${f}"` } }), { status: 422 }); }
+  if (url.includes('airtable') && n++ < 2) { const k = ['Email', 'Scope of Work'][n - 1];
+    return new Response(JSON.stringify({ error: { type: 'UNKNOWN_FIELD_NAME', message: `Unknown field name: "${k}"` } }), { status: 422 }); }
   return new Response('{}', { status: 200 }); };
 await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify(sample) }));
-check(calls.filter(c => c.url.includes('airtable')).length === 3, 'missing optional columns are skipped and the record still saves');
+const lastAt = calls.filter(c => c.url.includes('airtable')).pop().body.records[0].fields;
+check(calls.filter(c => c.url.includes('airtable')).length === 3 && !lastAt['Scope of Work'] && lastAt['Notes'].includes('STRIKE'), 'missing columns skipped; details fall back into Notes');
 
 // A list sent to a plain-text column is retried as text.
 calls.length = 0; let m = 0;
@@ -74,12 +88,12 @@ globalThis.fetch = async (url, opts) => { const body = JSON.parse(opts.body); ca
   return new Response('{}', { status: 200 }); };
 await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify(sample) }));
 const last = calls.filter(c => c.url.includes('airtable')).pop();
-check(last.body.records[0].fields['Services'] === 'Install + strike crew, Custom fabrication', 'list retried as text for a text column');
+check(last.body.records[0].fields['Services'] === 'Strike crew, Trucking + delivery, Custom fabrication', 'list retried as text for a text column');
 
 // Other forms are ignored.
 calls.length = 0;
 await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify({ payload: { form_name: 'other', data: {} } }) }));
 check(calls.length === 0, 'non-inquiry forms are ignored');
 
-console.log(ok ? '\nAll checks passed. Email preview: test/email-preview.html' : '\nSome checks failed.');
+console.log(ok ? '\nAll checks passed. Previews: test/email-preview.html, test/scope-of-work-preview.txt' : '\nSome checks failed.');
 process.exit(ok ? 0 : 1);
