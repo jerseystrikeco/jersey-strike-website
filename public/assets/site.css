@@ -1,0 +1,35 @@
+/* Jersey Strike Co. base styles. Page layout lives inline in each page. */
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:#0A100D;color:#F4EEDF}
+img{max-width:100%}
+a{color:#7A5B22}
+a:hover{color:#0A100D}
+header a:hover,footer a:hover,nav a:hover{opacity:.85}
+:focus-visible{outline:2px solid #D8B46A;outline-offset:3px}
+input,select,textarea,button{font:inherit;color:#0A100D}
+input:focus,select:focus,textarea:focus,summary:focus-visible{outline:2px solid #9A7838;outline-offset:1px}
+summary{list-style:none}
+summary::-webkit-details-marker{display:none}
+details[open] > summary{border-color:#0A100D !important}
+details[open] > summary svg{transform:rotate(180deg)}
+summary svg{transition:transform .15s ease;flex:none}
+.js-dd-summary .dd-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.js-dd-summary.has-value{color:#0A100D !important}
+details label:hover{background:#F4EEDF}
+button[type=submit]:hover{opacity:.9}
+button[type=submit][disabled]{opacity:.6;cursor:progress}
+/* Small screens */
+@media (max-width:640px){
+  header nav{gap:14px 18px !important;font-size:13px !important}
+  section > div{padding-top:64px !important;padding-bottom:64px !important}
+  form{padding:22px !important}
+}
+/* Build library */
+.build-card:hover img{transform:scale(1.03)}
+.build-card:focus-visible{outline:2px solid #9A7838;outline-offset:6px;border-radius:14px}
+.build-dialog{padding:0;border:0;border-radius:18px;max-width:920px;width:calc(100% - 32px);overflow:hidden;box-shadow:0 30px 80px -20px rgba(0,0,0,.6)}
+.build-dialog::backdrop{background:rgba(10,16,13,.75)}
+.build-dialog[open]{display:block}
+@media (max-width:640px){.build-dialog img{max-height:42vh !important}}

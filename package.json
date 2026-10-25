@@ -1,0 +1,10 @@
+{
+  "name": "jersey-strike-website",
+  "private": true,
+  "type": "module",
+  "description": "Jersey Strike Co. website with inquiry email + Airtable automation",
+  "scripts": {
+    "test": "node test/test-inquiry.mjs"
+  },
+  "engines": { "node": ">=18" }
+}
