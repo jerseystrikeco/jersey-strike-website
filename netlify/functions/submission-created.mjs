@@ -16,7 +16,8 @@
 //   AIRTABLE_BASE_ID   your base ID, starts with "app"
 //   AIRTABLE_TABLE     optional; defaults to your EVENT INQUIRIES + LEADS table
 
-const SITE = 'https://jerseystrike.com';
+// Netlify sets URL to the live site address (the netlify.app address now, jerseystrike.com once the domain is connected).
+const SITE = (process.env.URL || 'https://jerseystrike.com').replace(/\/$/, '');
 
 // Your existing Airtable table: EVENT INQUIRIES + LEADS (table ID below).
 // Left side = what the form collects, right side = your column name.
