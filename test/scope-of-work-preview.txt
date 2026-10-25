@@ -34,10 +34,13 @@ TRUCKING + ACCESS
 Truck: Client-provided truck, Jersey Strike drives + loads
 Vehicles:
   • 26ft Box Truck
-Studio pickup / return: 12 Studio Lane, Red Bank, NJ
-Access:
+Venue access:
   • Loading dock
   • Long push (100 ft+)
+Venue loading + parking: Dock behind kitchen; staff lot
+Pickup / return location: Residential / work-from-home florist space
+Pickup / return address: 12 Studio Lane, Red Bank, NJ
+Pickup loading + parking: Driveway fits a van only
 Rough load: 12 urns, 4 tree frames, largest 14 ft
 
 FABRICATION

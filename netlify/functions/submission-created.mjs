@@ -107,8 +107,11 @@ const DETAILS = [
   ['Trucking + access', [
     ['truck', 'Truck'],
     ['vehicles', 'Vehicles', 'list'],
-    ['studio_address', 'Studio pickup / return'],
-    ['access', 'Access', 'list'],
+    ['access', 'Venue access', 'list'],
+    ['venue_access_notes', 'Venue loading + parking'],
+    ['pickup_type', 'Pickup / return location'],
+    ['studio_address', 'Pickup / return address'],
+    ['studio_access_notes', 'Pickup loading + parking'],
     ['load_size', 'Rough load'],
   ]],
   ['Fabrication', [

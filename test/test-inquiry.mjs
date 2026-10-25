@@ -23,7 +23,7 @@ const sample = {
       linens: 'Bag, count + leave on site', linen_dropoff: 'Venue garage by the dock', linen_bags: 'Rental company bags will be on site',
       other_rentals: 'Yes, leave them in place', client_staff: '2',
       truck: 'Client-provided truck, Jersey Strike drives + loads', vehicles: '26ft Box Truck', studio_address: '12 Studio Lane, Red Bank, NJ',
-      access: 'Loading dock; Long push (100 ft+)', load_size: '12 urns, 4 tree frames, largest 14 ft',
+      access: 'Loading dock; Long push (100 ft+)', venue_access_notes: 'Dock behind kitchen; staff lot', pickup_type: 'Residential / work-from-home florist space', studio_access_notes: 'Driveway fits a van only', load_size: '12 urns, 4 tree frames, largest 14 ft',
       fab_description: 'Suspended hoop, 8 ft diameter', fab_needed_by: '2027-05-30',
       docs_link: 'https://drive.example.com/deck', walkthrough_link: '',
       scope: 'Last time the strike ran long because of the trees.',
@@ -47,7 +47,7 @@ check(subjectFor(q) === 'New Inquiry: June 12, 2027 at Turning Stone Resort Casi
 const text = scopeText(q);
 writeFileSync(new URL('./scope-of-work-preview.txt', import.meta.url), text);
 check(/^SERVICES\n• Strike crew/.test(text) && text.includes('STRIKE\nStrike can start: 10:00 PM') && text.includes('Venue hard out: 11:30 PM'), 'Scope of Work has headings + 12-hour times');
-check(text.includes('Linen drop spot: Venue garage by the dock') && text.includes('TRUCKING + ACCESS') && text.includes('FABRICATION\nWhat to build: Suspended hoop') && text.includes('Needed by: Sun, May 30, 2027'), 'every answered section is included');
+check(text.includes('Pickup / return location: Residential / work-from-home florist space') && text.includes('Pickup loading + parking: Driveway fits a van only') && text.includes('Venue loading + parking: Dock behind kitchen') && text.includes('Linen drop spot: Venue garage by the dock') && text.includes('TRUCKING + ACCESS') && text.includes('FABRICATION\nWhat to build: Suspended hoop') && text.includes('Needed by: Sun, May 30, 2027'), 'every answered section is included');
 check(!text.includes('INSTALL + SET-UP') && !text.includes('RIGGING') && !text.includes('HOLIDAY') && !text.includes('Walkthrough'), 'unanswered sections and blanks left out');
 check(text.includes('THEIR NOTES\nLast time') && text.includes('DOCUMENTS\nrun-of-show.pdf') && text.includes('Agreed: quote is a preliminary estimate'), 'notes, documents + agreement included');
 
