@@ -126,6 +126,7 @@
         s.classList.toggle('q-later', !any);
       });
       if (submitBtn) submitBtn.classList.toggle('q-later', !open || !picked('services').length);
+      var legal = form.querySelector('.js-legal-note'); if (legal && submitBtn) legal.classList.toggle('q-later', submitBtn.classList.contains('q-later'));
       // Offer "Skip" on the current question when it's optional.
       if (current && !current.classList.contains('q-req') && !fields(current).some(function (el) { return el.required; })) {
         if (skip.parentNode !== current) current.appendChild(skip);

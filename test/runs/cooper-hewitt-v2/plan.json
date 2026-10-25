@@ -1,0 +1,147 @@
+{
+ "summary": "Strike-only for Floralaine at the Cooper Hewitt: ~46 work units of glass-heavy tablescapes plus ceremony/tent-entrance meadows with all mechanics kept. Slow-strike job (\u22483 units/person-hour). Recommend a team of 5, starting 10:30pm, off property by ~2:00am, Glen Ridge offload included.",
+ "job_type": "strike_only",
+ "hq": "Montclair",
+ "zones": [
+  {
+   "name": "Reception tables",
+   "tasks": "13 rounds (arrangement, 3 tapers + sleeves, 3 votives) + 8 rectangles (2 medium + 2 petite arrangements, 4 pillars, 4\u20136 votives)",
+   "team": 2,
+   "notes": "~25 units; candles + glass are the slow part"
+  },
+  {
+   "name": "Ceremony pieces at band + tent entrance",
+   "tasks": "10 aisle meadows + semi-circle meadow (repurposed in front of band), layered ceramic pots, 2 metal arch stands, 4 pillar lanterns",
+   "team": 2,
+   "notes": "Keep ALL mechanics and moss/chicken wire; pots are heavy"
+  },
+  {
+   "name": "Bars, cocktail + after party",
+   "tasks": "2 reception bars, cocktail bar + lounge, 10 bud vases + 10 votives, after-party 15 bud vases + bar (collect at midnight)",
+   "team": 1,
+   "notes": "Shared by whoever finishes tables first"
+  },
+  {
+   "name": "Truck pack + studio offload",
+   "tasks": "Pack labeled boxes per Taylor's videos, strap, drive to Glen Ridge, offload to driveway/patio, trash in driveway",
+   "team": 4
+  }
+ ],
+ "shifts": [
+  {
+   "label": "Strike + studio return",
+   "date": "Sat 10/24/26",
+   "kind": "strike",
+   "team_size": 5,
+   "roles": "1 lead + 4 detail muscle",
+   "depart_hq": "9:15pm",
+   "back_hq": "3:30am",
+   "venue_day": true,
+   "steps": [
+    {
+     "time": "9:15pm",
+     "label": "Depart Montclair HQ in JS van"
+    },
+    {
+     "time": "10:15pm",
+     "label": "Arrive 90th St garden entrance; truck key + location from planner, security check-in"
+    },
+    {
+     "time": "10:30pm",
+     "label": "Strike begins in tent (guests at after party)"
+    },
+    {
+     "time": "12:00am",
+     "label": "After-party bud vases + bar"
+    },
+    {
+     "time": "1:45am",
+     "label": "Truck packed + strapped (hard out 2:00am), depart for Glen Ridge"
+    },
+    {
+     "time": "2:25am",
+     "label": "Arrive Glen Ridge, offload to driveway/patio, trash in driveway"
+    },
+    {
+     "time": "3:05am",
+     "label": "Depart for HQ"
+    },
+    {
+     "time": "3:30am",
+     "label": "Back at Montclair HQ"
+    }
+   ]
+  }
+ ],
+ "vehicles": [
+  {
+   "kind": "van",
+   "label": "JS van (crew transport)",
+   "count": 1,
+   "round_trip_miles": 45,
+   "trips": 1
+  },
+  {
+   "kind": "client_truck",
+   "label": "Floralaine box truck NYC \u2192 Glen Ridge",
+   "round_trip_miles": 20,
+   "trips": 1
+  }
+ ],
+ "equipment": {
+  "ladders": 0,
+  "skyscraper_ladders": 0,
+  "rigging_kit": false
+ },
+ "travel": {
+  "tolls": 50,
+  "tolls_note": "NYC tolls + parking (Lincoln Tunnel / street parking)"
+ },
+ "base_fee_days": 1,
+ "logistics_notes": [
+  "Montclair HQ is closest (Glen Ridge studio is ~10 min from HQ).",
+  "Two vehicles: crew in the JS van, one driver brings Floralaine's truck back. Truck is street-parked near the museum: get the exact spot + key contact before 10pm.",
+  "Garden entrance on 90th St between Madison + 5th: pull the truck up there to load.",
+  "Hard out 2:00am; this plan is off property ~12:45am with a 75-min buffer.",
+  "No trash at the venue: all trash rides back to Taylor's driveway."
+ ],
+ "reasoning": [
+  "~46 work units at the SLOW strike speed (3/ph: glass-heavy, keep all mechanics, labeled packing, lawn tent \u2192 street truck in NYC) \u2248 15.3 person-hours + 1.5 for kept mechanics \u2248 17 person-hours on site.",
+  "Window 10:30pm \u2192 2:00am hard out (3.25 hrs after prep) \u2192 5 people. With 4 people it runs past the hard out (this is what happened on 10/24: done ~3:30am without unloading).",
+  "Glen Ridge offload planned as its own 40-min step."
+ ],
+ "red_flags": [
+  "Hard out 2:00am is tight: if the venue won't let us start until 11pm, go to 6 people.",
+  "Truck location TBD on the street; late key handoff eats strike time.",
+  "Candle hard goods changed (p.12) and the floor plan grew to 13 rounds + 8 rectangles."
+ ],
+ "missing_info": [
+  "Can we start breaking down the tent at 10:00\u201310:30 while guests are at the after party?",
+  "Exact truck location + who holds the key",
+  "Box/crate count Taylor is leaving for packing"
+ ],
+ "client_questions": [
+  "Can our team start clearing the tent around 10:30 once guests head inside?",
+  "Where will the truck be parked, and which planner has the key?"
+ ],
+ "client_history": "Floralaine is a repeat, highly organized client (Natirar 8/8/26, Saratoga 9/19/26, Cooper Hewitt). Not price-sensitive; quote straight.",
+ "similar_jobs": [
+  {
+   "job": "Floralaine \u00b7 Natirar 8/8/26",
+   "charged": "$4,052.70",
+   "why": "Same florist; strike team of 4 \u00d7 5.75 hrs, loaded florist vans"
+  },
+  {
+   "job": "Daybreak \u00b7 Spring Lake GC 9/26/26",
+   "charged": "$2,025",
+   "why": "Similar size wedding strike: team of 4 \u00d7 5.75 hrs, 27 tables + tent poles"
+  }
+ ],
+ "task_list": [
+  "Reception: 13 rounds + 8 rectangles: arrangements, tapers + sleeves, pillars, votives",
+  "Ceremony: 10 aisle meadows + semi-circle meadow (at band), keep mechanics",
+  "Tent entrance: ceramic pots, branching greenery, 2 metal arch stands, 4 pillar lanterns",
+  "Bars: 2 reception + cocktail bar + lounge; after party 15 bud vases + bar",
+  "Pack + strap Floralaine truck; offload in Glen Ridge driveway; trash to driveway"
+ ]
+}

@@ -49,12 +49,16 @@ Claude estimates every custom build (materials cost + shop hours) from past fab 
 ## Solo shifts
 Team of 1 only with a very strong team member AND a very easy job AND daytime AND an easy drive. Night strikes and ladder work: minimum 2.
 
+## Price the real effort
+Quote what the job actually takes (team + hours from the sizing method), not what we guess the client will accept. Repeat clients like Floralaine pay full quotes; under-quoting just eats margin and burns out the crew. Use the leaner option to offer choices, never to quietly shrink the team.
+
 ## First-time clients
 Many first-time inquirers haven't budgeted for us yet; they often book on the 3rd–5th inquiry or when they're in a pinch. Drafts check the client's history, keep the real quote honest, and suggest a leaner option to offer.
 
 ## Grandfathered clients
 - Wile Events: $50/hr install/design labor and 5% admin fee (old rates; being brought up to market over time). Wile is the ONLY client still at $50; everyone else is $65. Their jobs typically run $10k+ from volume, so still profitable.
 - A Petal to Peddle (Christa Quigley, Jersey City): no strike or full-service minimum; charged actual job + 8% admin. Her jobs are small.
+- Floralaine (Taylor Diglio, Glen Ridge): repeat, very organized, pays full quotes (would have paid ~$2,800 for Cooper Hewitt). Quote straight.
 - A Lily Among Thorns (Isabel Garcia, Bergenfield): 25% family discount off the total, taken after the 8% admin fee. Draft checks the business name against this list and notes when an old rate applies.
 
 ## HQ (start and end of every timeline)

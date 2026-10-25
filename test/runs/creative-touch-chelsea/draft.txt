@@ -1,0 +1,88 @@
+Draft quote $5,165.10: A Creative Touch · November 3, 2026
+
+DRAFT QUOTE (AI, for admin review): $5,165.10
+
+2-day install for A Creative Touch at Chelsea Square, NYC: greenery and willow branches on the building scaffolding (sidewalk-shed canopy over the entrance), meant to stay up a year. 3 JS people + Donna's team, 10am–3pm each day. Priced per day as she asked; NYC premium applied. Big flags on working on the scaffold and long-term liability.
+
+QUOTE BREAKDOWN
+- Day 1 install | Tue 11/3/26: $1,856.25  (Team of 3 × 8.25 hrs × $75.00/hr (8:30am → 4:45pm portal to portal); premium: nyc difficult; 2 designers + 1 detail muscle)
+- Day 2 install | Wed 11/4/26: $1,856.25  (Team of 3 × 8.25 hrs × $75.00/hr (8:30am → 4:45pm portal to portal); premium: nyc difficult; 2 designers + 1 detail muscle)
+- JS van (crew + ladders): $70.00  (1 van × 35 mi round trip × 2 trips × $1.00/mi)
+- Ladders: $100.00  (2 × $50.00)
+- Skyscraper ladder (12–24 ft): $150.00  (1 × $150.00)
+- Tolls (estimate): $150.00  (NYC tolls + Chelsea parking, 2 days (~$75/day))
+Items subtotal: $4,182.50
+- Base Service: $600.00  (2 venue days × $300.00)
+Subtotal: $4,782.50
+Admin fee 8%: $382.60
+TOTAL: $5,165.10
+
+This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.
+
+TIMELINE
+Tue 11/3/26 · Day 1 install: JS Team of 3 (2 designers + 1 detail muscle)
+  8:30am - Depart Montclair HQ (AM tunnel traffic)
+  9:30am - Arrive W 20th St, park/unload ladders + tools, meet Donna
+  10:00am - Install begins
+  3:00pm - Stop; tidy sidewalk, secure materials overnight
+  3:30pm - Depart for HQ
+  4:45pm - Back at HQ (PM traffic)
+Wed 11/4/26 · Day 2 install: JS Team of 3 (2 designers + 1 detail muscle)
+  8:30am - Depart Montclair HQ
+  9:30am - Arrive, unload
+  10:00am - Install continues
+  3:00pm - Final walk-through with Donna, clean sidewalk
+  3:30pm - Depart
+  4:45pm - Back at HQ
+
+ZONES
+- Scaffold canopy front (2): Branches + greenery along the canopy edge and front face
+- Cascades / sides (1): Hanging greenery + willow down the uprights and sides
+
+MARGIN: 63.9% gross (on target; target 50%). Cost ~$1,864.00.
+
+TASK LIST
+- Day 1 + Day 2: install branches, willow + greenery on the scaffold canopy (client-supplied materials + zip ties/wire)
+- Work alongside Donna + 2 of her team
+- Clean sidewalk each day
+
+RED FLAGS:
+- WORKING ON SCAFFOLDING: who owns the scaffold, and are our people allowed on it? NYC may require scaffold-trained workers and the scaffold company's sign-off. If not allowed, ladders only (scaffold height unknown).
+- Long-term outdoor install (1 year) over a public sidewalk: falling branches/wire are a liability. Our scope is labor under Donna's direction; add a clause that JS isn't responsible for durability, maintenance or removal.
+- COI almost certainly required (NYC building + scaffold contractor), likely naming additional insureds.
+- Dates not locked (she hopes Nov 2–3; we're open Nov 3–6).
+- Budget: she declined the 10/24 Hamilton Farm quote for budget.
+
+MISSING INFO:
+- Scaffold height + who owns it; are we allowed on it?
+- Square footage / linear feet of coverage
+- COI requirements
+- Dates
+- Where materials are delivered/stored overnight
+
+ASK THE CLIENT:
+- Who owns the scaffolding, and will they allow our team to work on it?
+- Roughly how many feet of scaffolding are we covering?
+- Which 2 days: 11/3–11/6?
+- Will the building need a COI from us?
+
+LOGISTICS:
+- Montclair HQ; ~1 hr each way with tunnel traffic.
+- No dock: street/garage parking on W 20th St; carry ladders + tools.
+- Per day (as Donna asked): ~$2,582 per day all-in (labor $1,856.25 + base $300 + share of van/tolls/ladders + 8%).
+- No strike: the venue handles removal in a year.
+- Dry run: drive times estimated by Claude (no Google key).
+
+REASONING:
+- She asked for 3 people × 2 days, 10–3, and Donna's team of 3 works alongside: 6 people total is reasonable for a scaffold façade of this size.
+- Portal-to-portal 8.25 hrs/day (10–3 on site + NYC drive both ways + setup/cleanup).
+- NYC premium (+$10/hr): Manhattan street parking, no dock, carrying ladders + tools, sidewalk work.
+- Can't size from scope yet: no measurements or height. 3 × 2 days is her ask; confirm coverage area.
+
+CLIENT HISTORY:
+- Second inquiry from A Creative Touch this month; she declined the 10/24 Hamilton Farm quote for budget. Classic 'not budgeted for us yet' first-timer. Quote the real job and give her a lean option.
+- Leaner option: Day 1 with 3 JS people to set the structure and hard-to-reach parts, Day 2 her team finishes with 1 JS lead: about $3,900 instead of $5,165.
+
+SIMILAR PAST JOBS:
+- A Lily Among Thorns · Chelsea Square 9/26/26 + 6/20/26 ($1,700 / $857): Same venue (429 W 20th St): JS knows the block; strikes, not installs
+- Grace + Grit · Prospect Park 10/10/26 ($5,000): NYC outdoor-ish smilax + hanging install, 4 people, ladders + rigging

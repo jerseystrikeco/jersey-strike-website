@@ -1,0 +1,19 @@
+{
+ "summary":"Install-only ceiling help for A Creative Touch at Hamilton Farm (10/24): load-in at 11am, then 5 chandeliers and a full dance-floor perimeter garland on an ~11-ft lip, all with premade smilax. About 31 work units ≈ 15.5 person-hours on site in a 5-hour window, so 3 people. Strike priced as an add-on.",
+ "job_type":"install_only","hq":"Montclair",
+ "zones":[{"name":"Load-in","tasks":"Unload Donna's delivery at 11am, stage greenery + hardware","team":3},{"name":"Chandeliers","tasks":"5 chandeliers wrapped with premade smilax, ruscus fill","team":1,"notes":"2 units each"},{"name":"Dance-floor perimeter","tasks":"~96 ft of premade smilax on the lip using her wood pieces + clips","team":2,"notes":"~1.5 units per 10 ft; on ladders"}],
+ "shifts":[{"label":"Load-in + ceiling install","date":"Sat 10/24/26","kind":"install","team_size":3,"roles":"2 designers + 1 detail muscle","depart_hq":"9:45am","back_hq":"5:30pm","venue_day":true,"premium_reasons":[],
+  "steps":[{"time":"9:45am","label":"Depart Montclair HQ with 3 ladders"},{"time":"10:45am","label":"Arrive Hamilton Farm, check in, find load-in door"},{"time":"11:00am","label":"Donna's delivery: unload + stage"},{"time":"11:45am","label":"Chandeliers + perimeter garland"},{"time":"3:45pm","label":"Install complete; clean floor, fluff"},{"time":"4:15pm","label":"Ladders + tools out before guests (ceremony 4:30)"},{"time":"4:30pm","label":"Depart for HQ"},{"time":"5:30pm","label":"Back at HQ"}]}],
+ "vehicles":[{"kind":"van","label":"JS van (crew + ladders)","count":1,"round_trip_miles":70,"trips":1}],
+ "equipment":{"ladders":3,"skyscraper_ladders":0,"rigging_kit":false},
+ "base_fee_days":1,
+ "logistics_notes":["Montclair HQ (~35 min each way).","8–12 ft A-frames are enough for an 11-ft lip under a 12-ft ceiling.","Everything must be off the floor by ~4:15 so the room can turn for the 5pm reception.","OPTIONAL STRIKE (not in total): team of 3, 9:15pm → 1:30am (4.25 hrs) removing chandelier + perimeter garland (≈45% of install time) = $828.75 + van $70, +8% = ~$970. Same day, so no extra base fee."],
+ "reasoning":["5 chandeliers × 2 units + ~96 ft perimeter × 1.5 per 10 ft (~14 units) + load-in ~4 + hardware/wood pieces ~3 ≈ 31 units.","Premade garland installs at ~2 units/ph → ~15.5 person-hours on site.","Window 11:00am → ~4:00pm (5 hrs) → 3 people. With 2 people it's ~7.75 hrs on site and runs into the ceremony/reception turn.","Donna is on site; if she or her team can work the perimeter alongside us, 2 JS people can work (see leaner option)."],
+ "red_flags":["Exact perimeter length unknown (~96 ft assumed for a ~24×24 dance floor): +/- 1 hr per 30 ft.","Venue rules on attaching to the lip/lighting and COI are TBD, 9 days out.","Short timeline + injured captains: she's in a pinch."],
+ "missing_info":["Perimeter length","Hamilton Farm COI + load-in door/parking","Does Donna or her team work alongside us?"],
+ "client_questions":["How many feet is the dance-floor perimeter?","Will you or anyone from your team be hanging alongside us?"],
+ "client_history":"First time working with A Creative Touch (no past Trellis jobs). First-timers often haven't budgeted for us yet: quote the real job, offer a lean option.",
+ "lean_option":"2 JS team members with Donna working the perimeter alongside us, she handles strike and ladders: 2 × 7.75 hrs × $65 + van + base ≈ $1,465.",
+ "similar_jobs":[{"job":"Stemtations · Renault Winery ceilings (2025–26)","charged":"$1,755–2,592","why":"Premade smilax/ceiling greenery, 2–3 people, 6–10 hr days"},{"job":"Daybreak · Ryland Inn 9/6/25","charged":"$1,882","why":"5 chandeliers with smilax (strike side)"}],
+ "task_list":["Load in Donna's delivery (11am)","5 chandeliers: premade smilax + ruscus","Full dance-floor perimeter garland on the lip (wood pieces + clips)","Clean up + ladders out by ~4:15pm","OPTION: strike after 10pm"]
+}

@@ -21,9 +21,18 @@ Typical shapes:
    - 1 unit = one guest table setting (CP + candles/votives), one cocktail-table group, one bar, one escort/sweetheart/cake display.
    - 0.5 unit = a bud-vase cluster or small piece (votive sets, signage, 10 loose bud vases).
    - 2 units = arch/chuppah/ceremony meadow cluster, large urn/pedestal pair, mantle/fireplace, staircase, tent entrance.
-   - 3 units per chandelier or per ~10 ft of ceiling/beam greenery (needs ladders); 4+ for hung structures/grids.
+   - 3 units per chandelier or per ~10 ft of ceiling/beam greenery designed on site (needs ladders); 4+ for hung structures/grids.
+   - Premade garland (smilax arrives made): 1.5 units per ~10 ft hung on a lip/beam/rail; 2 units per chandelier wrap. Install these at ~2 units/ph (not the 1–1.5 for designed ceilings).
+   - Long-term or outdoor installs (scaffolding, façades, sidewalk sheds): 2 units per ~10 ft of branch/greenery coverage, 1.5 units/ph; working off scaffolding or above 12 ft is slow and needs a safety plan.
    - Linens: 1 unit per ~25 linens to count/bag. Furniture/chairs: 1 unit per ~25 chairs moved.
-3. **Convert to on-site person-hours.** Strike ≈ **5 units per person-hour** (incl. careful packing + strapping). Install/design ≈ **2 units per person-hour** (slower: placement, fluffing, candles). Ceiling/rigging: use 1–1.5 units/ph for install.
+3. **Convert to on-site person-hours.** Pick the strike speed by job type:
+   - **5 units/ph**: simple collection: bud vases, compotes, a few installs, client packs their own, short carry to a dock/van.
+   - **4 units/ph**: typical wedding strike with candles + rentals to studio.
+   - **3.5 units/ph**: glass-heavy (150+ candle pieces / hurricanes / tapers + sleeves), "keep all mechanics / chicken wire", labeled-box packing to the florist's system, ground meadows with soil/moss, OR a long carry (NYC street-parked truck, tent on a lawn, stairs).
+   - Crew strength matters: a strong lead + experienced crew can run ~1 unit/ph faster; newer crews slower. Cooper Hewitt (10/24/26) ran at ~3/ph with a weaker crew (Joel's read) on a glass-heavy NYC job; don't plan around that pace, but don't plan around 5 for this kind of job either.
+   - When in doubt between two speeds, use the slower one and say so.
+   Install/design ≈ **2 units per person-hour** (slower: placement, fluffing, candles). Ceiling/rigging: use 1–1.5 units/ph for install.
+   Add **+1 person-hour** for every 20 units when the florist wants mechanics/chicken wire kept, and plan studio unload as its own step (35–60 min with 4).
 4. **Fit the window.** Team = person-hours ÷ the client's window (load-in → photo ready, or breakdown start → hard stop / departure), rounded up, min 2 for night strikes and anything with ladders, max ~1 per zone pair. If the window forces more than 6 people, flag it.
 5. **Build the portal-to-portal timeline** (pricing formula steps) using drive times; add 0.5–1 hr studio unload/organize when returning rentals, +0.25–0.5 hr if resetting the client's truck, +1–1.5 hr to load a 26 ft truck (1.5 for holidays).
 6. **Sanity check** against the 2–3 most similar past jobs (same florist, venue or scope size). If your hours or team differ by more than ~30% from those, explain why or adjust.
