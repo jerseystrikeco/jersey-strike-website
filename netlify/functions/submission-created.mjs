@@ -32,6 +32,7 @@ const F = {
 // Detail columns you added. If one is renamed or removed, it's skipped automatically.
 // If a column doesn't exist, it is skipped automatically (everything is also in Notes).
 const OPTIONAL = {
+  status: process.env.AIRTABLE_STATUS_FIELD || 'Status',
   email: 'Email',
   phone: 'Phone Number',
   venue: 'Venue',
@@ -228,6 +229,7 @@ export function airtableFields(q) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(q.eventDate)) f[F.eventDate] = q.eventDate;
   if (q.services.some((s) => /fabrication/i.test(s))) f[F.fabrication] = true;
   const opt = {
+    [OPTIONAL.status]: process.env.AIRTABLE_STATUS_VALUE || 'NEED REPLY',
     [OPTIONAL.email]: q.email,
     [OPTIONAL.phone]: q.phone,
     [OPTIONAL.venue]: q.venue,
