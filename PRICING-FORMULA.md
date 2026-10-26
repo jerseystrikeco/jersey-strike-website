@@ -70,7 +70,7 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 ## Drive times
 - Google Maps drive time for every leg (HQ → studio → venue → delivery → HQ), using traffic for the actual day and time.
 - Box trucks: use truck-legal routing (e.g. no NY parkways, Garden State Parkway truck restrictions, low clearances), which can be longer than the car route.
-- Each leg uses traffic for that day and time, plus a 15 min buffer, rounded up to the quarter hour (Google's 44 min = 1 hr in the timeline). The HQ departure leg has a 1 hr minimum: leave HQ = start time minus (drive + 15–30 min early arrival), but never less than 1 hr before the start. Don't pad beyond that.
+- Each leg uses traffic for that day and time, rounded up to the quarter hour. Leaving HQ: no extra buffer (the 15–30 min early arrival covers it; 44 min → 45 min). Every later leg (venue → studio, back to HQ, late at night with a loaded van): +15 min, rounded up (44 min → 1 hr). The HQ departure leg has a 1 hr minimum: leave HQ = start time minus (drive + 15–30 min early arrival), but never less than 1 hr before the start. Don't pad beyond that.
 
 ## Install timeline
 1. Crew departs HQ (leave = start − drive − 15 min buffer; 1 hr minimum)
@@ -100,7 +100,7 @@ Example (Alyssa's own, GITP strike at Park Loft, 10:30pm start, 11:30pm hard out
 - 11:45pm depart for studio
 - 12:45am back at studio, unload
 - 1:00am done (GITP's studio is HQ; for any other client, add the drive from their studio back to HQ)
-= 3.5 hrs portal to portal. Allow ~15 min between "done" and departing the venue, plan the late-night return drive at about an hour, and ~15 min to unload a van.
+= 3.5 hrs portal to portal. With a hard out, strike + backload runs right up to the hard out (not earlier); depart ~15 min after. Return drive = Google + 15 min, rounded up (about an hour here). Unload is its own step, sized to the vehicle and how full it is: ~15 min for a van; 30–60 min for a smaller box truck or U-Haul; up to 1.5 hrs for a full 26 ft box truck (less with a bigger crew or a light load).
 
 ## Quote footer
 This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.
