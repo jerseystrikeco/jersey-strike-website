@@ -70,7 +70,7 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 ## Drive times
 - Google Maps drive time for every leg (HQ → studio → venue → delivery → HQ), using traffic for the actual day and time.
 - Box trucks: use truck-legal routing (e.g. no NY parkways, Garden State Parkway truck restrictions, low clearances), which can be longer than the car route.
-- Each leg uses traffic for that day and time, rounded up to the quarter hour. Leaving HQ: no extra buffer (the 15–30 min early arrival covers it; 44 min → 45 min). Every later leg (venue → studio, back to HQ, late at night with a loaded van): +15 min, rounded up (44 min → 1 hr). The HQ departure leg has a 1 hr minimum: leave HQ = start time minus (drive + 15–30 min early arrival), but never less than 1 hr before the start. Don't pad beyond that.
+- Each leg uses traffic for that day and time, rounded up to the quarter hour. Leaving HQ: no extra buffer (the 15–30 min early arrival covers it; 44 min → 45 min). Every later leg (venue → studio, back to HQ, late at night with a loaded van): +15 min, rounded up (44 min → 1 hr). New York legs (NYC, Westchester, Long Island) always get extra cushion: +30 min on later legs and +15 min on the drive out, and box trucks can't use NY parkways (Hutchinson, Saw Mill, Bronx River, etc.), so truck legs run longer than Google's car route. Drive time to and from HQ is always a 1 hr minimum, whichever HQ we leave from: leave HQ at least 1 hr before the first start (studio load or venue), and the drive back to HQ is at least 1 hr. Otherwise leave HQ = start time minus (drive + 15–30 min early arrival). Don't pad beyond that.
 
 ## Install timeline
 1. Crew departs HQ (leave = start − drive − 15 min buffer; 1 hr minimum)
@@ -101,6 +101,9 @@ Example (Alyssa's own, GITP strike at Park Loft, 10:30pm start, 11:30pm hard out
 - 12:45am back at studio, unload
 - 1:00am done (GITP's studio is HQ; for any other client, add the drive from their studio back to HQ)
 = 3.5 hrs portal to portal. With a hard out, strike + backload runs right up to the hard out (not earlier); depart ~15 min after. Return drive = Google + 15 min, rounded up (about an hour here). Unload is its own step, sized to the vehicle and how full it is: ~15 min for a van; 30–60 min for a smaller box truck or U-Haul; up to 1.5 hrs for a full 26 ft box truck (less with a bigger crew or a light load).
+
+## Billing actual overtime
+When a job runs past the quoted timeline (and the client approved it), keep the quoted start time and bill the extra time as its own "Timeline extension" line, in completed quarter hours (not rounded up): quoted back 8:00PM, actual back 10:47PM = +2.75 hrs per person. Show quoted vs actual.
 
 ## Quote footer
 This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.
