@@ -94,8 +94,10 @@ export async function planRoutes(inquiry, { truck = false } = {}) {
   // Timeline drive times. Leaving HQ: rounded up to the quarter hour (the 15-30 min early
   // arrival is the cushion there). Every later leg (venue -> studio, back to HQ, often late at
   // night with a loaded van) gets +15 min, rounded up (44 min -> 1 hr).
-  const plan = (m, first) => (m > 0 ? Math.ceil((m + (first ? 0 : DRIVE_BUFFER_MIN)) / 15) * 15 : 0);
-  best.legs.forEach((leg, i) => { leg.plan_minutes = plan(leg.minutes, i === 0); });
+  // New York legs (NYC, Westchester, Long Island) always get a bigger cushion: +30 min instead of +15.
+  const isNY = (a) => /,\s*(NY|New York)\b|\bNYC\b|Manhattan|Brooklyn|Queens|Bronx|Staten Island/i.test(String(a || ''));
+  const plan = (m, first, ny) => (m > 0 ? Math.ceil((m + (first ? (ny ? 15 : 0) : (ny ? 30 : DRIVE_BUFFER_MIN))) / 15) * 15 : 0);
+  best.legs.forEach((leg, i) => { leg.ny = isNY(leg.from) || isNY(leg.to); leg.plan_minutes = plan(leg.minutes, i === 0, leg.ny); });
   notes.push(`Used ${best.hq.name} HQ (${best.minutes} min total loop${ok[1] ? ` vs ${ok[1].minutes} min from ${ok[1].hq.name}` : ''}).`);
 
   if (truck) {
@@ -105,7 +107,7 @@ export async function planRoutes(inquiry, { truck = false } = {}) {
           const t = await hereTruckLeg(leg.from, leg.to);
           leg.truckMiles = t.miles;
           leg.truckMinutes = t.minutes;
-          leg.plan_minutes = plan(t.minutes, leg === best.legs[0]);
+          leg.plan_minutes = plan(t.minutes, leg === best.legs[0], leg.ny);
         } catch (e) {
           notes.push(`Truck route ${leg.from} → ${leg.to}: ${e.message}`);
         }

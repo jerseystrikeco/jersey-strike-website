@@ -54,6 +54,11 @@ export function proposalFilename(q) {
 export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) {
   const title = `${shortDate(q.eventDate)} | ${q.business || q.contact} | ${(q.venue || '').split(',')[0]}`;
   const doc = new PDFDocument({ size: 'LETTER', margins: { top: 34, bottom: 60, left: 50, right: 50 }, bufferPages: true, info: { Title: title, Author: 'Jersey Strike Co' } });
+  // Built-in Helvetica only has WinAnsi characters: swap the arrows/symbols Claude likes to use.
+  const WIN = { '↔': '<->', '→': '->', '←': '<-', '≈': '~', '≥': '>=', '≤': '<=', '✓': 'OK', '−': '-' };
+  const fixText = (v) => (typeof v === 'string' ? v.replace(/[↔→←≈≥≤✓−]/g, (c) => WIN[c]).replace(/[^\x00-\xFF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026\u20AC\u2122]/g, '') : v);
+  const _text = doc.text.bind(doc);
+  doc.text = (t, ...rest) => _text(fixText(t), ...rest);
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
   const done = new Promise((res) => doc.on('end', () => res(Buffer.concat(chunks))));
