@@ -32,7 +32,9 @@ export const QF = {
   status: process.env.AIRTABLE_STATUS_FIELD || 'Status',
   draft: 'Draft Quote', // Long text
   total: 'Draft Total', // Currency
-  flags: 'Quote Notes', // Long text
+  flags: 'Quote Notes', // Long text: everything the reviewer needs (flags, missing info, logistics, reasoning)
+  redFlags: 'Red Flags', // Long text: just the red flags + scope/staffing risks, easy to scan in grid view
+  crew: 'Suggested Crew', // Long text: suggested team per crew call + backups
 };
 
 const truckish = (inq) =>
@@ -135,10 +137,30 @@ export function quoteFields(args) {
     [QF.draft]: renderQuoteText(args).slice(0, 95000),
     [QF.total]: args.priced.total,
     [QF.flags]: renderFlagsText(args).slice(0, 95000),
+    [QF.redFlags]: redFlagsText(args).slice(0, 95000),
+    [QF.crew]: crewText(args).slice(0, 95000),
   };
 }
 
-async function updateAirtable(recordId, args) {
+function redFlagsText({ plan, priced }) {
+  const staffFlags = (plan.staffing || []).flatMap((s) => (s.flags || []).map((f) => `Staffing (${s.shift || 'crew'}): ${f}`));
+  return [...(priced.grandfathered ? [priced.grandfathered] : []), ...(plan.red_flags || []), ...priced.warnings, ...staffFlags]
+    .map((x) => `- ${x}`).join('\n') || 'None';
+}
+
+function crewText({ plan, staff }) {
+  if (!plan.staffing?.length) return staff?.available === false ? `Not suggested: ${(staff.notes || []).join(' ')}` : 'Not suggested.';
+  const cal = staff?.calendar;
+  const head = cal ? [`${cal.peak_day ? 'PEAK DAY. ' : ''}${cal.other_events_same_day.length} other event(s) that day; ${cal.already_booked_that_day} of ${cal.active_staff} active staff already booked.`, ''] : [];
+  return [...head, ...plan.staffing.flatMap((s) => [
+    `${s.shift || 'Crew'}:`,
+    ...(s.crew || []).map((c) => `- ${c.name}${c.role ? ` (${c.role})` : ''}${c.why ? `: ${c.why}` : ''}`),
+    ...(s.backups?.length ? [`Backups: ${s.backups.join(', ')}`] : []),
+    '',
+  ])].join('\n').trim();
+}
+
+export async function updateAirtable(recordId, args) {
   const token = process.env.AIRTABLE_TOKEN;
   const base = process.env.AIRTABLE_BASE_ID;
   const table = process.env.AIRTABLE_TABLE || DEFAULT_TABLE;
@@ -149,12 +171,21 @@ async function updateAirtable(recordId, args) {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ fields, typecast: true }),
     });
-  let r = await patch(quoteFields(args));
-  if (r.status === 422) {
-    // A quote column is missing: at least flag the row so it isn't lost.
+  // If a column doesn't exist yet, drop just that one and save the rest.
+  let fields = quoteFields(args);
+  let r = await patch(fields);
+  for (let i = 0; r.status === 422 && i < 6; i++) {
     const err = await r.text();
-    console.error('[quote] Airtable columns missing, saving status only:', err);
-    r = await patch({ [QF.status]: 'Needs review' });
+    const missing = err.match(/Unknown field name: \\?"([^"\\]+)/)?.[1];
+    if (!missing || !(missing in fields)) {
+      console.error('[quote] Airtable rejected the draft, saving status only:', err);
+      r = await patch({ [QF.status]: 'Needs review' });
+      break;
+    }
+    console.error(`[quote] Airtable column "${missing}" is missing; saved the rest. Add it as a Long text column to keep it.`);
+    const { [missing]: _drop, ...rest } = fields;
+    fields = rest;
+    r = await patch(fields);
   }
   if (!r.ok) throw new Error(`Airtable ${r.status}: ${await r.text()}`);
 }
