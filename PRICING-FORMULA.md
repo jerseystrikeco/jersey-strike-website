@@ -34,9 +34,9 @@ Exceptions: a job clearing $2,000+ gross profit has room to run under 50% (flagg
 
 ## Premium labor ($75 / $85)
 Standard is $65/hr. A crew call gets +$10/hr per trigger, max +$20 ($85), only on that call; major holidays are time and a half on top:
-- **major_holiday**: time and a half on the whole rate ($65 → $97.50, as charged the day after Christmas 2025): Thanksgiving Day + the day after, Dec 24, 25, 26, Dec 31, Jan 1, July 4
+- **major_holiday**: time and a half on the whole rate ($65 → $97.50, as charged the day after Christmas 2025; team paid $45/hr): Thanksgiving / Black Friday weekend (Wed–Sun), the whole Dec 23 – Jan 2 holiday season, July 4
   - Team pay on major holidays: $45/hr (billed $97.50, so the labor margin holds).
-- **holiday**: +$10: rest of Thanksgiving weekend, Memorial/Labor Day weekends, Valentine's/Mother's Day weeks for floral work
+- **holiday**: +$10: Memorial/Labor Day weekends, Valentine's/Mother's Day weeks for floral work. All of these (and the major holidays) also get a red flag: staffing is hard, line up the team early. Other US holidays (MLK, Presidents' Day, Easter, Father's Day, Juneteenth, July 4th weekend, Columbus Day, Halloween, Veterans Day) are noted for traffic/availability but carry no premium.
 - **nyc_difficult**: Manhattan/Brooklyn/Queens with no dock, street parking/permits, security check-in, freight elevator/union rules, long carries
 - **short_notice**: inquiry less than 7 days out
 - **extreme_access**: ladders over 20 ft, scissor lift, heavy hung structures/grids over a dance floor
@@ -60,6 +60,7 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 - A Petal to Peddle (Christa Quigley, Jersey City): no strike or full-service minimum; charged actual job + 8% admin. Her jobs are small.
 - Floralaine (Taylor Diglio, Glen Ridge): repeat, very organized, pays full quotes (would have paid ~$2,800 for Cooper Hewitt). Quote straight.
 - A Lily Among Thorns (Isabel Garcia, Bergenfield): 25% family discount off the total, taken after the 8% admin fee. Draft checks the business name against this list and notes when an old rate applies.
+- Garden in the Pines (GITP, Alyssa's floral studio, 1404 Circle Dr, Forked River): Jersey Strike's sister company. Its studio IS the Forked River HQ, so a job for GITP ends when the unload at the studio is done: no extra drive back to HQ. Not a first-time client, so skip the first-time / lean-option talk.
 
 ## HQ (start and end of every timeline)
 - South Jersey jobs: 1404 Circle Dr, Forked River, NJ 08731
@@ -69,10 +70,10 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 ## Drive times
 - Google Maps drive time for every leg (HQ → studio → venue → delivery → HQ), using traffic for the actual day and time.
 - Box trucks: use truck-legal routing (e.g. no NY parkways, Garden State Parkway truck restrictions, low clearances), which can be longer than the car route.
-- Each leg is padded for traffic, and the HQ departure leg has a 1 hr minimum.
+- Each leg uses traffic for that day and time. The HQ departure leg has a 1 hr minimum: leave HQ = start time minus (drive + 15–30 min early arrival), but never less than 1 hr before the start. Don't pad beyond that.
 
 ## Install timeline
-1. Crew departs HQ (1 hr minimum)
+1. Crew departs HQ (leave = start − drive − 15 min buffer; 1 hr minimum)
 2. Arrive at studio 15 min before start
 3. Start / load at studio → done loading
 4. Depart, drive to venue
@@ -82,7 +83,7 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 8. Depart, drive back to HQ
 
 ## Strike timeline
-1. Depart HQ, drive to venue (1 hr minimum)
+1. Depart HQ, drive to venue (leave = strike start − drive − 15–30 min buffer; 1 hr minimum)
 2. Arrive 15–30 min early to prep for strike
 3. Extra time if we have to reset the client's truck to prep for strike
 4. Strike
@@ -90,6 +91,16 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 6. Depart to delivery location
 7. Delivery arrival → unload / organize
 8. Depart, drive back to HQ
+
+Example (Alyssa's own, GITP strike at Park Loft, 10:30pm start, 11:30pm hard out, ~45 min drive, return to studio):
+- 9:30pm depart HQ
+- 10:15pm arrive / prep
+- 10:30pm strike starts
+- 11:30pm strike done, van backloaded + organized
+- 11:45pm depart for studio
+- 12:45am back at studio, unload
+- 1:00am done (GITP's studio is HQ; for any other client, add the drive from their studio back to HQ)
+= 3.5 hrs portal to portal. Allow ~15 min between "done" and departing the venue, plan the late-night return drive at about an hour, and ~15 min to unload a van.
 
 ## Quote footer
 This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.
