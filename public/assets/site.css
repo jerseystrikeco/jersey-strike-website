@@ -46,3 +46,9 @@ form.is-stepped .q-later{display:none !important}
 .q-skip{align-self:flex-start;margin-top:8px;padding:0;border:0;background:none;color:#7A5B22;font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer}
 .q-skip:hover{color:#0A100D}
 @media (prefers-reduced-motion:reduce){.q-enter{animation:none}}
+
+/* Headline font (Bodoni Moda): use the low optical size so the fine lines stay thick enough to read,
+   and set headings a step bolder. Body text is unchanged. */
+[style*="Bodoni Moda"], .legal h2 { font-variation-settings: "opsz" 12; }
+h1[style*="Bodoni Moda"], h2[style*="Bodoni Moda"], h3[style*="Bodoni Moda"], .legal h2 { font-weight: 600 !important; }
+h1[style*="Bodoni Moda"] em, h2[style*="Bodoni Moda"] em, h3[style*="Bodoni Moda"] em { font-weight: inherit !important; }
