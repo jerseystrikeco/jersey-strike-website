@@ -60,7 +60,7 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 - A Petal to Peddle (Christa Quigley, Jersey City): no strike or full-service minimum; charged actual job + 8% admin. Her jobs are small.
 - Floralaine (Taylor Diglio, Glen Ridge): repeat, very organized, pays full quotes (would have paid ~$2,800 for Cooper Hewitt). Quote straight.
 - A Lily Among Thorns (Isabel Garcia, Bergenfield): 25% family discount off the total, taken after the 8% admin fee. Draft checks the business name against this list and notes when an old rate applies.
-- Garden in the Pines (GITP, Alyssa's floral studio, 1404 Circle Dr, Forked River): Jersey Strike's sister company. Its studio IS the Forked River HQ, so a job for GITP ends when the unload at the studio is done: no extra drive back to HQ. Not a first-time client, so skip the first-time / lean-option talk.
+- Garden in the Pines (GITP, Alyssa's floral studio, 1404 Circle Dr, Forked River): Jersey Strike's sister company. Its studio IS the Forked River HQ, so a job for GITP ends when the unload at the studio is done: no extra drive back to HQ. Not a first-time client, so skip the first-time / lean-option talk. The $1,500 strike / $5,000 full-service minimums still get flagged for GITP like everyone else.
 
 ## HQ (start and end of every timeline)
 - South Jersey jobs: 1404 Circle Dr, Forked River, NJ 08731
@@ -70,7 +70,7 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 ## Drive times
 - Google Maps drive time for every leg (HQ → studio → venue → delivery → HQ), using traffic for the actual day and time.
 - Box trucks: use truck-legal routing (e.g. no NY parkways, Garden State Parkway truck restrictions, low clearances), which can be longer than the car route.
-- Each leg uses traffic for that day and time. The HQ departure leg has a 1 hr minimum: leave HQ = start time minus (drive + 15–30 min early arrival), but never less than 1 hr before the start. Don't pad beyond that.
+- Each leg uses traffic for that day and time, plus a 15 min buffer, rounded up to the quarter hour (Google's 44 min = 1 hr in the timeline). The HQ departure leg has a 1 hr minimum: leave HQ = start time minus (drive + 15–30 min early arrival), but never less than 1 hr before the start. Don't pad beyond that.
 
 ## Install timeline
 1. Crew departs HQ (leave = start − drive − 15 min buffer; 1 hr minimum)
