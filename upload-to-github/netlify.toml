@@ -1,0 +1,33 @@
+# Jersey Strike Co. website: Netlify settings
+[build]
+  # Bundles PRICING-FORMULA.md + past-jobs/ into the quote function on every deploy.
+  command = "node scripts/build-knowledge.mjs"
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # pdfkit reads its font files from disk at runtime, so ship it as-is instead of bundling it.
+  external_node_modules = ["pdfkit"]
+
+# Cache images for a week; styles, scripts and pages always fresh.
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    # Always check for a newer version so site updates show up right away.
+    Cache-Control = "public, max-age=0, must-revalidate"
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Internal team worksheet: keep it out of search engines.
+[[headers]]
+  for = "/team-quote/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
