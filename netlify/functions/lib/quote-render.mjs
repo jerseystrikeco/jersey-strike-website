@@ -60,7 +60,7 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
   const totals =
     `<tr><td style="${td};text-align:right">Items subtotal</td>${money(priced.itemsSubtotal)}</tr>` + chargeRows +
     `<tr><td style="${td};text-align:right;font-weight:700">Subtotal</td>${money(priced.subtotal, true)}</tr>` +
-    `<tr><td style="${td};text-align:right">Admin fee ${pct(priced.adminPct)}</td>${money(priced.admin)}</tr>` +
+    `<tr><td style="${td};text-align:right">${esc(priced.feeLabel || 'Admin fee')} ${pct(priced.adminPct)}</td>${money(priced.admin)}</tr>` +
     (priced.discount ? `<tr><td style="${td};text-align:right">${esc(priced.discount.label)} −${pct(priced.discount.pct)}</td>${money(priced.discount.amount)}</tr>` : '') +
     `<tr><td style="padding:10px 6px;text-align:right;font-size:16px;font-weight:700">Total</td><td style="padding:10px 6px;text-align:right;font-size:16px;font-weight:700">${fmt(priced.total)}</td></tr>`;
 
@@ -140,7 +140,7 @@ export function renderQuoteText({ inquiry: q, plan, priced, routes }) {
   for (const l of priced.lines) L.push(`- ${l.label}: ${fmt(l.amount)}  (${l.math}${l.roles ? `; ${l.roles}` : ''})`);
   L.push(`Items subtotal: ${fmt(priced.itemsSubtotal)}`);
   for (const c of priced.charges) L.push(`- ${c.label}: ${fmt(c.amount)}  (${c.math})`);
-  L.push(`Subtotal: ${fmt(priced.subtotal)}`, `Admin fee ${pct(priced.adminPct)}: ${fmt(priced.admin)}`);
+  L.push(`Subtotal: ${fmt(priced.subtotal)}`, `${priced.feeLabel || 'Admin fee'} ${pct(priced.adminPct)}: ${fmt(priced.admin)}`);
   if (priced.discount) L.push(`${priced.discount.label} -${pct(priced.discount.pct)}: ${fmt(priced.discount.amount)}`);
   L.push(`TOTAL: ${fmt(priced.total)}`, '', FOOTER, '');
   L.push('TIMELINE');

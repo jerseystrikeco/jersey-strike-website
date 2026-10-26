@@ -28,6 +28,12 @@ const NEXT = [
   '3. Submit the service agreement and retainer online through your client portal via Dubsado',
   "4. Keep an eye on your email inbox, add us to your contact list, and we will confirm the details with you approximately 2-weeks before the event to confirm the scope of work, timeline, inventory + task lists, etc. Don't hesitate to reach out if you have any questions or updates you'd like to discuss.",
 ];
+// Full productions: planning fee up front (Social Supply-style) + 50% deposit on the remainder.
+const NEXT_PRODUCTION = (priced) => [
+  NEXT[0],
+  `2. Our event success manager will email over our service agreement and invoice: the ${Math.round(priced.adminPct * 100)}% PRODUCTION PLANNING FEE (due before planning begins; non-refundable if the event is cancelled) plus a 50% DEPOSIT on the remainder to reserve our team and hold your date.`,
+  ...NEXT.slice(2),
+];
 const BEST = [
   "REACH OUT TO OUR EVENT SUCCESS MANAGER DURING YOUR PROPOSAL PROCESS SO YOU CAN BUILD IN OUR TEAM TO YOUR FUTURE EVENT ESTIMATES. WE'LL HAPPILY MOCK UP A QUOTE FOR YOU BASED ON YOUR CURRENT DETAILS TO ENSURE YOU'RE ABLE TO MAINTAIN YOUR IDEAL MARGINS FOR PROFITABILITY WITHOUT MISSING ANY MAJOR LOGISTIC CONSIDERATIONS.",
   'UTILIZE AN EVENT RECIPE SYSTEM (LIKE TRELLIS) TO KEEP YOUR MARGINS FOR PROFITABILITY WHEN DETAILING PROPOSALS AND UPDATING RECIPES. THIS WILL CREATE A SEAMLESS PRODUCTION EXPERIENCE BECAUSE YOU CAN PRINT REPORTS FOR YOUR DESIGNER AND SET UP TEAM, SUBMIT ORDERS EASILY TO YOUR VENDORS, AND PRINT YOUR INVENTORY + BREAKDOWN LIST FOR OUR TEAM EASILY',
@@ -168,7 +174,7 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   }
   row('Charges', money(priced.charges.reduce((a, c) => a + c.amount, 0)), { bold: true });
   row('Subtotal', money(priced.subtotal), { bold: true });
-  row(`Admin Fee   ${Math.round(priced.adminPct * 100)}%`, money(priced.admin));
+  row(`${priced.production ? 'Production Planning Fee' : 'Admin Fee'}   ${Math.round(priced.adminPct * 100)}%`, money(priced.admin));
   if (priced.discount) row(`${priced.discount.label}   -${Math.round(priced.discount.pct * 100)}%`, money(priced.discount.amount));
   row('Total', money(priced.total), { bold: true });
   doc.moveDown(1.2); ensure(50);
@@ -177,7 +183,7 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   // What happens next
   doc.addPage(); header();
   doc.font(FB).fontSize(12.5).text('WHAT HAPPENS NEXT?', L, doc.y); doc.moveDown(0.9);
-  doc.font(F).fontSize(11.5); NEXT.forEach((p) => { doc.text(p, L, doc.y, { width: CW, lineGap: 3 }); doc.moveDown(0.9); });
+  doc.font(F).fontSize(11.5); (priced.production ? NEXT_PRODUCTION(priced) : NEXT).forEach((p) => { doc.text(p, L, doc.y, { width: CW, lineGap: 3 }); doc.moveDown(0.9); });
 
   // Best practices
   doc.addPage(); header();

@@ -60,13 +60,13 @@ table.tot { width:100%; border-collapse:collapse; font-size:11.5pt; page-break-i
 <table class="tot"><tr><td></td><td class="lab b">Subtotal</td><td class="v b">${num(priced.itemsSubtotal)}</td></tr>${charges}
 <tr><td></td><td class="lab b">Charges</td><td class="v b">${num(chargeSum)}</td></tr>
 <tr><td></td><td class="lab b">Subtotal</td><td class="v b">${num(priced.subtotal)}</td></tr>
-<tr><td></td><td class="lab">Admin Fee &nbsp; ${Math.round(priced.adminPct * 100)}%</td><td class="v">${num(priced.admin)}</td></tr>
+<tr><td></td><td class="lab">${priced.production ? 'Production Planning Fee' : 'Admin Fee'} &nbsp; ${Math.round(priced.adminPct * 100)}%</td><td class="v">${num(priced.admin)}</td></tr>
 ${priced.discount ? `<tr><td></td><td class="lab">${esc(priced.discount.label)} &nbsp; -${Math.round(priced.discount.pct * 100)}%</td><td class="v">${num(priced.discount.amount)}</td></tr>` : ''}
 <tr><td></td><td class="lab b">Total</td><td class="v b">${num(priced.total)}</td></tr></table>
 <div class="note">*This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.</div></div>
 <div class="page">${hdr}<h3>WHAT HAPPENS NEXT?</h3>
 <p>1. Inform us if you'd like to move forward with reserving your event on our team calendar.</p>
-<p>2. Our event success manager will email over our service agreement and invoice (15% RETAINER) to reserve our team and hold your date.</p>
+${priced.production ? `<p>2. Our event success manager will email over our service agreement and invoice: the ${Math.round(priced.adminPct * 100)}% PRODUCTION PLANNING FEE (due before planning begins; non-refundable if the event is cancelled) plus a 50% DEPOSIT on the remainder to reserve our team and hold your date.</p>` : `<p>2. Our event success manager will email over our service agreement and invoice (15% RETAINER) to reserve our team and hold your date.</p>`}
 <p>3. Submit the service agreement and retainer online through your client portal via Dubsado</p>
 <p>4. Keep an eye on your email inbox, add us to your contact list, and we will confirm the details with you approximately 2-weeks before the event to confirm the scope of work, timeline, inventory + task lists, etc. Don't hesitate to reach out if you have any questions or updates you'd like to discuss.</p></div>
 <div>${hdr}<h3>BEST PRACTICES:</h3><ul class="bp">

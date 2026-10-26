@@ -27,6 +27,16 @@ Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, 
 - Studio days (processing, prep, reset): flat $450 per person per day
 - Admin fee: 8% of everything else (applied last, on the full subtotal)
 
+## Full production (Full Production page inquiries, or any job where we produce the whole build)
+Modeled on Social Supply (DC), who charge a 15% design fee up front, a 50% deposit and a $10k minimum.
+- job_type = full_production. Typical full production: $15k–$55k+. Drafts FLAG anything under $15,000 (maybe a crew job instead), never bump.
+- Labor, team, trucking, vehicles, equipment, base fee, travel: priced exactly as above (same rates).
+- Sourced items (chandeliers, greenery, disco balls, lanterns, decor, hardware we buy for the job): 50% margin = our cost × 2. Claude estimates our cost; confirm real prices before quoting.
+- Outside vendor rentals / pass-throughs (lift, truss, tent add-ons): our cost + 10% handling.
+- Custom fabrication: same as below (materials × 2 + shop hours × $65).
+- Production planning fee: 12% of the full subtotal, INSTEAD of the 8% admin fee (covers the producer: scoping call, walkthrough, production plan, vendor coordination, close-out report).
+- Terms: the 12% planning fee is invoiced at booking, due before planning begins and non-refundable if the event is cancelled; then a 50% deposit on the remainder holds the date. (Replaces the 15% retainer for productions.)
+
 ## Margin target (internal)
 Aim for **50% gross profit on every job**. Cost = team pay $30/hr (all jobs; $45 on major holidays; overtime after 40 hrs clocked in a week) × (portal-to-portal hours + each person's drive between home and HQ, ~1 hr round trip assumed) + studio days (8 hrs × $30) + fuel ~$0.70/mi + U-Haul actual cost + fab materials/shop time + pass-throughs (rentals, hotel, meals, tolls). Each draft shows the margin, flags anything under 50% and gives the total that would hit 50%. Under 40% = "not viable as quoted".
 Payroll taxes, workers' comp and insurance are NOT in the cost: the 50% gross margin leaves room for the net to work out.

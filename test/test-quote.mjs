@@ -93,12 +93,14 @@ check(claude.body.system[0].text.includes('PRICING FORMULA') && claude.body.syst
 check(calls.filter((c) => c.url.includes('routes.googleapis.com')).length === 6, 'drive times checked from both HQs');
 const mail = calls.find((c) => c.url.includes('resend'));
 check(mail && mail.body.to[0] === 'inquire@jerseystrike.com' && !mail.body.reply_to, 'review email goes to admins, no client reply-to');
-check(mail.body.subject.startsWith('Draft quote $10,056.90'), 'subject: ' + mail.body.subject);
+check(mail.body.subject.startsWith('Re: New Inquiry:') && /inquiry-/.test(mail.body.headers['In-Reply-To']) && mail.body.text.startsWith('Draft quote $10,056.90'), 'draft threads under the inquiry email: ' + mail.body.subject);
 check(/Method A/.test(mail.body.html) && /Red flags/i.test(mail.body.html) && /preliminary estimate/.test(mail.body.html), 'email has math, red flags and the scope-change footer');
 const at = calls.find((c) => c.url.includes('airtable') && c.method === 'PATCH');
 check(at && at.url.endsWith('/tblvthafdL2XhCDZt/recABC') && at.body.fields.Status === 'Needs review' && at.body.fields['Draft Total'] === 10056.9,
   'Airtable row updated: Status = Needs review, Draft Total');
+check(mail.body.attachments?.[0]?.filename.endsWith('.pdf') && Buffer.from(mail.body.attachments[0].content, 'base64').subarray(0, 4).toString() === '%PDF', 'proposal PDF attached: ' + mail.body.attachments?.[0]?.filename);
 writeFileSync(new URL('./quote-preview.html', import.meta.url), mail.body.html);
+writeFileSync(new URL('./proposal-preview.pdf', import.meta.url), Buffer.from(mail.body.attachments[0].content, 'base64'));
 
 // Claude failure -> admins get a "needs manual quote" email
 calls.length = 0;
@@ -109,6 +111,21 @@ globalThis.fetch = async (url, opts = {}) => {
 };
 await handler(new Request('https://x/', { method: 'POST', headers: { 'x-quote-secret': triggerSecret() }, body: JSON.stringify({ inquiry, recordId: 'recABC' }) }));
 check(calls.some((c) => c.url.includes('resend') && /failed/.test(c.body.subject)), 'if Claude fails, admins get a "needs manual quote" email');
+
+// Full production: 12% planning fee replaces admin, sourced items at 50% margin, rentals +10%.
+{
+  const prodPlan = { job_type: 'full_production', base_fee_days: 1,
+    shifts: [{ label: 'Install', kind: 'install', team_size: 4, depart_hq: '8:00am', back_hq: '6:00pm' }],
+    vehicles: [], sourced_items: [{ label: '12 disco balls + greenery', cost: 3000 }], additional_rentals: [{ label: 'Scissor lift', amount: 500 }] };
+  const pp = priceQuote(prodPlan, { business: 'Test Planner', production: true });
+  const sourcing = pp.lines.find((l) => l.section === 'Sourcing');
+  const lift = pp.lines.find((l) => l.label === 'Scissor lift');
+  check(sourcing.amount === 6000 && lift.amount === 550, 'production: sourced items at 50% margin ($3,000 → $6,000), rentals + 10% ($500 → $550)');
+  check(pp.adminPct === 0.12 && pp.feeLabel === 'Production planning fee' && pp.admin === Math.round(pp.subtotal * 12) / 100, 'production: 12% planning fee replaces the 8% admin fee');
+  check(pp.subtotal === 2600 + 6000 + 550 + 300 && pp.warnings.some((w) => /typical full production/.test(w)), 'production: labor + base unchanged; under $15k flagged: ' + pp.subtotal);
+  const normal = priceQuote({ ...prodPlan, job_type: 'full_service' }, { business: 'Test Planner' });
+  check(normal.adminPct === 0.08 && normal.lines.find((l) => l.label === 'Scissor lift').amount === 500, 'crew jobs keep 8% admin + rentals at cost');
+}
 
 console.log(ok ? '\nAll quote checks passed. Email preview: test/quote-preview.html' : '\nSome checks failed.');
 process.exit(ok ? 0 : 1);

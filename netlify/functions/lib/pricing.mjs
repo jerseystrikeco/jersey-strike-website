@@ -16,6 +16,14 @@ export const RATES = {
   studioDayPerPerson: 450, // processing / design studio / reset days, flat
   baseFeePerVenueDay: 300,
   adminFeePct: 0.08, // applied last, on everything
+  // Full production jobs (Full Production page, or job_type "full_production"). Modeled on Social Supply (DC).
+  production: {
+    planningFeePct: 0.12, // "Production planning fee", replaces the 8% admin fee; applied last, on the full subtotal
+    sourcedMargin: 0.5, // things we buy for the job (chandeliers, greenery, disco balls, decor): 50% margin = our cost x 2
+    rentalUpcharge: 0.1, // outside vendor rentals / pass-throughs: our cost + 10% handling (production jobs only)
+    depositPct: 0.5, // deposit on the remainder, after the planning fee
+    typicalMin: 15000, // drafts flag full productions under this, don't bump
+  },
   vanPerMile: 1, // per van, round trip
   boxTruckFuelPerRoundTrip: 200, // cap: box trucks bill $1/mi per round trip, up to $200 (short local trips don't burn a full tank)
   boxTruckFuelPerMile: 1,
@@ -39,7 +47,7 @@ export const RATES = {
   },
   targetMargin: 0.5, // aim for 50% gross profit on every job
   bigJobGrossProfit: 2000, // a job clearing $2k+ gross profit can run under 50%
-  minimums: { strike_only: 1500, full_service: 5000 }, // all-in totals incl. admin; drafts FLAG jobs under these, don't bump
+  minimums: { strike_only: 1500, full_service: 5000, full_production: 15000 }, // all-in totals incl. admin; drafts FLAG jobs under these, don't bump
   uhaul: {
     costPerDay: 87.5, // what U-Haul charges us (used when there's no real quote)
     costPerMile: 1.99,
@@ -141,6 +149,7 @@ export function priceUhaul({ days, miles, quotedCost }) {
 export function priceQuote(plan, inquiry = {}) {
   const R = RATES;
   const g = clientRules(inquiry.business);
+  const production = !!inquiry.production || plan.job_type === 'full_production';
   const lines = [];
   const warnings = [];
   const uhauls = [];
@@ -238,8 +247,21 @@ export function priceQuote(plan, inquiry = {}) {
   if (eq.rigging_kit) add('Equipment', 'Rigging tool kit', 'flat', R.riggingKit);
   for (const r of plan.additional_rentals || []) {
     if (num(r.amount) > 0 && !r.js_owned) costs.push({ what: `${r.label || 'Rental'} (pass-through)`, amount: num(r.amount) });
-    if (num(r.amount) > 0) add('Equipment', r.label || 'Additional rental', r.note ? `pass-through: ${r.note}` : 'pass-through', num(r.amount));
+    if (num(r.amount) > 0 && production && !r.js_owned) {
+      const up = R.production.rentalUpcharge;
+      add('Equipment', r.label || 'Additional rental', `our cost ${fmt(num(r.amount))} + ${Math.round(up * 100)}% handling${r.note ? `: ${r.note}` : ''}`, num(r.amount) * (1 + up));
+    } else if (num(r.amount) > 0) add('Equipment', r.label || 'Additional rental', r.note ? `pass-through: ${r.note}` : 'pass-through', num(r.amount));
   }
+
+  // Sourced items (chandeliers, greenery, disco balls, decor we buy for the job): 50% margin = our cost × 2.
+  for (const it of plan.sourced_items || []) {
+    const c = Math.max(0, num(it.cost));
+    if (!c) continue;
+    const m = R.production.sourcedMargin;
+    costs.push({ what: `${it.label || 'Sourced item'} (our cost)`, amount: c });
+    add('Sourcing', it.label || 'Sourced items', `our cost ${fmt(c)} at ${Math.round(m * 100)}% margin (÷ ${1 - m})${it.note ? `: ${it.note}` : ''}`, c / (1 - m));
+  }
+  if ((plan.sourced_items || []).some((it) => num(it.cost) > 0)) warnings.push('Sourced item costs are Claude estimates: confirm real prices before quoting.');
 
   // Travel
   const t = plan.travel || {};
@@ -264,8 +286,11 @@ export function priceQuote(plan, inquiry = {}) {
 
   // Minimums ($1,500 strike / $5,000 full-service, all-in incl. admin) are FLAGGED, not added:
   // the draft shows the real number and the admin team decides.
-  const minimum = g?.noMinimum ? 0 : R.minimums[plan.job_type] || 0;
-  const adminPct = g?.adminFeePct ?? R.adminFeePct;
+  const minimum = g?.noMinimum ? 0 : R.minimums[production ? 'full_production' : plan.job_type] || 0;
+  // Full productions carry a 12% production planning fee instead of the admin fee.
+  const adminPct = production ? R.production.planningFeePct : g?.adminFeePct ?? R.adminFeePct;
+  const feeLabel = production ? 'Production planning fee' : 'Admin fee';
+  if (production && g?.adminFeePct != null) warnings.push(`${g.name} normally gets a ${Math.round(g.adminFeePct * 100)}% admin fee; this full production uses the ${Math.round(R.production.planningFeePct * 100)}% production planning fee instead. Confirm.`);
   const admin = round2(subtotal * adminPct);
   let total = round2(subtotal + admin);
   let discount = null;
@@ -273,7 +298,9 @@ export function priceQuote(plan, inquiry = {}) {
     discount = { label: `${g.name} discount`, pct: g.discountPct, amount: round2(-total * g.discountPct) };
     total = round2(total + discount.amount);
   }
-  if (minimum && total < minimum) {
+  if (production && minimum && total < minimum) {
+    warnings.push(`Under ${fmt(minimum)}, the low end of a typical full production, by ${fmt(minimum - total)}. Check whether this should be quoted as a crew job instead.`);
+  } else if (minimum && total < minimum) {
     warnings.push(`Under the ${fmt(minimum)} ${plan.job_type === 'strike_only' ? 'strike' : 'full-service day-of'} minimum by ${fmt(minimum - total)} (all-in). Not bumped up; decide whether to apply it.`);
   }
 
@@ -290,7 +317,7 @@ export function priceQuote(plan, inquiry = {}) {
   if (perPerson > R.cost.overtimeAfter * 0.6) warnings.push(`About ${Math.round(perPerson)} hrs per person on this job: check the crew's weekly hours. Over 40 clocked = overtime at $45/hr.`);
 
   return {
-    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, admin, discount, total, uhauls, fabs, margin, warnings,
+    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings,
     grandfathered: g ? g.note : '',
   };
 }

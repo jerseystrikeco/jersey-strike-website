@@ -16,8 +16,8 @@ export const PLAN_SCHEMA = {
   required: ['summary', 'assumptions', 'job_type', 'zones', 'shifts', 'vehicles', 'base_fee_days', 'logistics_notes', 'reasoning', 'red_flags', 'missing_info'],
   properties: {
     summary: { type: 'string', description: '2-3 sentences: what the job is and the recommended approach.' },
-    job_type: { type: 'string', enum: ['full_service', 'strike_only', 'install_only', 'studio_only', 'other'],
-      description: 'full_service = day-of install and strike ($5,000 minimum). strike_only = $1,500 minimum.' },
+    job_type: { type: 'string', enum: ['full_production', 'full_service', 'strike_only', 'install_only', 'studio_only', 'other'],
+      description: 'full_production = Jersey Strike produces the whole build (planning, sourcing, fabrication, trucking, install, strike); always use it for FULL PRODUCTION INQUIRY entries. full_service = day-of install and strike ($5,000 minimum). strike_only = $1,500 minimum.' },
     hq: { type: 'string', enum: ['Forked River', 'Montclair'] },
     zones: { type: 'array', items: { type: 'object', required: ['name', 'team'], properties: {
       name: str, tasks: str, team: { type: 'number', description: '1-2 people' }, notes: str } } },
@@ -58,7 +58,10 @@ export const PLAN_SCHEMA = {
         flags: { ...strArr, description: "Claude's concerns: engineering/weight, timeline, structural risk, venue rules, unknown dimensions." },
         questions_for_larry: strArr,
         reusable: { type: 'string', description: 'Whether JS could keep it as a rental afterward, and a suggested rental price.' } } } },
-    additional_rentals: { type: 'array', items: { type: 'object', properties: { label: str, amount: numT, note: str } } },
+    additional_rentals: { type: 'array', description: 'Outside vendor rentals at OUR cost (e.g. lift, truss, tent add-ons). The engine adds the handling upcharge on full productions.',
+      items: { type: 'object', properties: { label: str, amount: numT, note: str } } },
+    sourced_items: { type: 'array', description: 'Things Jersey Strike buys for the job (chandeliers, greenery, disco balls, lanterns, decor, hardware) at OUR estimated cost. The engine prices them at a 50% margin.',
+      items: { type: 'object', required: ['label', 'cost'], properties: { label: str, cost: { type: 'number', description: 'Our estimated cost in $' }, note: { type: 'string', description: 'Quantity, where from, how the cost was estimated.' } } } },
     travel: { type: 'object', properties: {
       tolls: numT, tolls_note: str, hotel_nights: numT, hotel_rooms: numT, hotel_rate_estimate: numT, meal_person_days: numT, hotel_reason: str } },
     base_fee_days: { type: 'number', description: 'Days the crew is on site at a venue, minus days waived because a split/next-day delivery is for our schedule, safety or convenience.' },
@@ -153,6 +156,7 @@ How to plan:
 - Base fee: count venue days, but waive extra days caused by next-day deliveries/returns that are for our schedule, team safety or convenience (explain in base_fee_note).
 - Destination job (hotel + $50/person/day meals) only if a shift is over 12 hrs on site AND the drive home is over 2 hrs; flag back-to-back far-away days for admin to decide.
 - Studio processing / reset days are flat per person (studio_days), not hourly.
+- Full productions (scope starts with "FULL PRODUCTION INQUIRY", or we produce the whole build): set job_type "full_production". Plan labor, trucking and equipment exactly as usual. List everything we'd buy for the job (chandeliers, greenery, disco balls, decor, hardware) in sourced_items at our estimated cost, and outside vendor rentals in additional_rentals at our cost; the engine adds the 50% sourcing margin, the rental handling and the 12% production planning fee. Include a planning/walkthrough crew call when a site visit is needed.
 - Never write "TBD" (or leave blank) for depart_hq, back_hq or step times: the price is built from them, and a TBD prices the crew call at $0. When the client hasn't given call times, assume sensible ones (e.g. 9am load-in, a typical event-day call), use them, and list each assumed time in assumptions so the team can correct it.
 - assumptions: this draft is a starting point for people who know the jobs better than you do. List the judgment calls behind the price (team size, pace, timings, drive, unload, counts, vehicle), say plainly which ones are your guesses vs. from the client, Google Maps or the formula, and what each would change in dollars if wrong. Never sound more certain than the evidence is.
 - Staffing: when a STAFF SHORTLIST is given, fill "staffing" with a suggested crew for every crew call, matching team_size. Use only names from the shortlist. Pick by: (1) availability (never anyone booked that day; note day-before/after bookings and heavy weeks); (2) SCHEDULE PRIORITY (1 = guaranteed weekly hours, schedule first; then 2, 3, 4; 5 = as needed, only for big/new jobs or when a team lead is needed); (3) Team Rank (A > B > TRAINEE; every crew call needs at least one A as Lead, and a TRAINEE only alongside an A); (4) skills the scope needs (TRUCK DRIVER for box trucks/U-Hauls/client trucks, Rigging for hung or overhead work, Floral Designer for design help, Wile Approved = YES for any Wile Events job); (5) home HQ that matches the job's HQ and a shorter drive (we pay their drive to HQ). Give 1-2 backups. Flag a peak day (calendar shows several events or many staff booked), anyone stretched thin, and skill gaps. If the shortlist is not available, leave staffing empty and say why in missing_info.
