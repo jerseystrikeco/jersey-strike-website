@@ -35,7 +35,14 @@ ${f.reusable ? `<div style="margin-top:8px"><b>Keep as a rental?</b> ${esc(f.reu
 </div>`).join('') + '<div style="font-size:13px;color:#5C574A">Let me know what you and Larry think. Reply with corrections and I\'ll fold them into future fab estimates.</div>';
 }
 
-export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = [], recordUrl = '' }) {
+function staffHtml(plan, staff, esc, list) {
+  if (!plan.staffing?.length) return `<span style="color:#A8A391">${esc(staff?.available === false ? (staff.notes || []).join(' ') || 'Staff list not available.' : 'No crew suggested.')}</span>`;
+  const cal = staff?.calendar;
+  const top = cal ? `<div style="margin-bottom:8px;color:#5C574A">${cal.peak_day ? '<b style="color:#8A2E1F">PEAK DAY.</b> ' : ''}${cal.other_events_same_day.length} other event(s) that day; ${cal.already_booked_that_day} of ${cal.active_staff} active staff already booked.</div>` : '';
+  return top + plan.staffing.map((s) => `<div style="margin:0 0 10px"><b>${esc(s.shift || 'Crew')}</b>${list((s.crew || []).map((c) => ({ html: `<b>${esc(c.name)}</b>${c.role ? ` · ${esc(c.role)}` : ''}${c.why ? `: ${esc(c.why)}` : ''}` })))}${s.backups?.length ? `<div style="color:#5C574A">Backups: ${esc(s.backups.join(', '))}</div>` : ''}${s.flags?.length ? list(s.flags, '#8A2E1F') : ''}</div>`).join('');
+}
+
+export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = [], recordUrl = '', staff = null }) {
   const gold = '#9A7838';
   const section = (title, body) =>
     `<tr><td style="padding:22px 28px 6px"><div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:${gold}">${esc(title)}</div>` +
@@ -112,6 +119,7 @@ ${zones ? section('Zones + team', `<table role="presentation" width="100%" cellp
 ${section('Logistics', list([...(plan.logistics_notes || []), ...(routes?.notes || [])]) + legs + (uhaul ? `<div style="margin-top:12px">${uhaul}</div>` : ''))}
 ${section('Reasoning', list([...(plan.reasoning || []), ...(plan.base_fee_note ? [`Base fee: ${plan.base_fee_note}`] : [])]))}
 ${plan.client_history || plan.lean_option ? section('Client history', `${esc(plan.client_history || '')}${plan.lean_option ? `<div style="margin-top:8px"><b>Leaner option:</b> ${esc(plan.lean_option)}</div>` : ''}`) : ''}
+${plan.staffing?.length || staff ? section('Suggested crew (internal)', staffHtml(plan, staff, esc, list)) : ''}
 ${section('Similar past jobs', list(similar))}
 ${plan.task_list?.length ? section('Task list', list(plan.task_list)) : ''}
 ${section('Inquiry', `<b>Contact:</b> ${esc(q.contact)} · ${esc(q.email)} · ${esc(q.phone)}<br><b>Studio:</b> ${esc(q.studio || 'Not provided')}<br><b>Services:</b> ${esc((q.services || []).join(', '))}<br><b>Team size (theirs):</b> ${esc(q.teamSize || '—')} · <b>Needs:</b> ${esc((q.teamNeeds || []).join(', '))}<br><b>Vehicles (theirs):</b> ${esc((q.vehicles || []).join(', '))}<br><b>Scope:</b> ${esc(q.scope).replace(/\n/g, '<br>')}<br><b>Documents:</b> ${(q.files || []).map((f) => `<a href="${esc(f.url)}" style="color:#0A100D">${esc(f.filename)}</a>`).join(', ') || 'None'}${docNotes.length ? `<div style="color:#8A2E1F;margin-top:6px">${docNotes.map(esc).join('<br>')}</div>` : ''}`)}
@@ -138,6 +146,15 @@ export function renderQuoteText({ inquiry: q, plan, priced, routes }) {
   if (priced.margin) L.push('', `MARGIN: ${priced.margin.pct}% gross (${priced.margin.verdict}; target 50%). Cost ~${fmt(priced.margin.cost)}${priced.margin.pct < 50 ? `; ${fmt(priced.margin.neededTotal)} hits 50%` : ''}.`);
   if (priced.uhauls.length) { L.push('', 'U-HAUL'); for (const u of priced.uhauls) L.push(`- ${u.label}: A ${fmt(u.a.amount)} vs B ${fmt(u.b.amount)}. ${u.why}`); }
   if (routes?.hq) L.push('', `Routing: ${routes.hq.name} HQ, ${routes.miles} mi / ${routes.minutes} min loop.`);
+  if (plan.staffing?.length) {
+    L.push('', 'SUGGESTED CREW (internal)');
+    for (const st of plan.staffing) {
+      L.push(`${st.shift || 'Crew'}:`);
+      for (const c of st.crew || []) L.push(`  - ${c.name}${c.role ? ` (${c.role})` : ''}${c.why ? `: ${c.why}` : ''}`);
+      if (st.backups?.length) L.push(`  Backups: ${st.backups.join(', ')}`);
+      for (const f of st.flags || []) L.push(`  ! ${f}`);
+    }
+  }
   if (plan.task_list?.length) { L.push('', 'TASK LIST'); for (const t of plan.task_list) L.push(`- ${t}`); }
   return L.join('\n');
 }

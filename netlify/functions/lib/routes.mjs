@@ -33,8 +33,9 @@ async function googleLeg(origin, destination) {
   if (!route) throw new Error(`No route from "${origin}" to "${destination}"`);
   const toll = route.travelAdvisory?.tollInfo?.estimatedPrice?.[0];
   return {
-    miles: Math.round(route.distanceMeters / M_PER_MI),
-    minutes: Math.round(parseInt(route.duration, 10) / 60),
+    // Google leaves out distance/duration when the two stops are the same place.
+    miles: Math.round((route.distanceMeters || 0) / M_PER_MI),
+    minutes: Math.round((parseInt(route.duration, 10) || 0) / 60),
     tolls: toll ? Number(toll.units || 0) + Number(toll.nanos || 0) / 1e9 : route.travelAdvisory?.tollInfo ? null : 0,
   };
 }
@@ -66,7 +67,15 @@ export async function planRoutes(inquiry, { truck = false } = {}) {
   const notes = [];
   if (!process.env.GOOGLE_MAPS_API_KEY) return { available: false, notes: ['GOOGLE_MAPS_API_KEY not set: drive times estimated by Claude.'] };
   if (!inquiry.venue) return { available: false, notes: ['No venue given: drive times not calculated.'] };
-  const stops = (hq) => [hq.address, ...(inquiry.studio ? [inquiry.studio] : []), inquiry.venue, hq.address];
+  // Install: HQ -> studio -> venue -> HQ. Strike only: HQ -> venue -> studio (drop-off) -> HQ.
+  const services = (inquiry.services || []).join(' ');
+  const strikeOnly = /strike/i.test(services) && !/install|set ?up|delivery|flip|design/i.test(services);
+  const same = (a, b) => String(a).toLowerCase().replace(/[^a-z0-9]/g, '') === String(b).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const stops = (hq) => {
+    const mid = inquiry.studio ? (strikeOnly ? [inquiry.venue, inquiry.studio] : [inquiry.studio, inquiry.venue]) : [inquiry.venue];
+    // Drop repeated stops (e.g. the client's studio is our HQ address).
+    return [hq.address, ...mid, hq.address].filter((x, i, a) => i === 0 || !same(x, a[i - 1]));
+  };
 
   const options = await Promise.all(HQS.map(async (hq) => {
     try {
