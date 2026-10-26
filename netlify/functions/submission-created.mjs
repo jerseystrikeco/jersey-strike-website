@@ -2,7 +2,7 @@
 //
 // Netlify runs this automatically every time someone submits a form on the site
 // (the file name "submission-created" is what tells Netlify to do that).
-// For the "inquiry" form it does two things, independently:
+// For the "inquiry" form (and "production", from the Full Production page) it does two things, independently:
 //   1. Emails a formatted summary to the inquiries inbox (via Resend).
 //   2. Adds a row to the "Inquiries" tab in your Airtable base.
 // If one of them fails, the other still runs, and Netlify's own copy of the
@@ -57,6 +57,12 @@ const DETAILS = [
     ['guest_count', 'Guests'],
     ['table_count', 'Tables'],
     ['event_budget', 'Floral + decor budget'],
+    ['full_event_budget', 'Full event budget'],
+  ]],
+  ['Full production', [
+    ['production_budget', 'Production budget'],
+    ['production_days', 'Production days'],
+    ['production_scope', 'In scope', 'list'],
   ]],
   ['Installs on site', [
     ['install_count', 'Large installs'],
@@ -167,6 +173,7 @@ export function detailSections(q) {
 export function scopeText(q) {
   const out = [];
   if (q.team) out.push('TEAM ENTRY', `Entered by: ${q.enteredBy || 'team'}`, `Came in by: ${q.inquirySource || 'not noted'}`, '');
+  if (q.production) out.push('FULL PRODUCTION INQUIRY (Full Production page): book a scoping call with a producer.', '');
   if (q.team && q.missing.length) out.push('STILL MISSING (follow up)', ...q.missing.map((x) => `• ${x}`), '');
   if (q.services.length) out.push('SERVICES', ...q.services.map((x) => `• ${x}`), '');
   for (const sec of detailSections(q)) {
@@ -191,7 +198,7 @@ export default async (req) => {
   } catch {
     return new Response('Bad request', { status: 400 });
   }
-  if (!payload || !['inquiry', 'team-quote'].includes(payload.form_name)) return new Response('Ignored');
+  if (!payload || !['inquiry', 'team-quote', 'production'].includes(payload.form_name)) return new Response('Ignored');
 
   const inquiry = normalize(payload);
   const results = await Promise.allSettled([sendEmail(inquiry), saveToAirtable(inquiry)]);
@@ -253,7 +260,7 @@ export function normalize(payload) {
     eventDate: s(d.event_date), // yyyy-mm-dd from the date picker
     venue: s(d.venue),
     studio: s(d.studio_address),
-    services: list(d.services),
+    services: list(d.services).length ? list(d.services) : payload.form_name === 'production' ? ['Full production'] : [],
     teamSize: s(d.team_size),
     teamNeeds: list(d.team_needs),
     vehicles: list(d.vehicles),
@@ -262,6 +269,8 @@ export function normalize(payload) {
     acknowledged: /^(yes|on|true)$/i.test(s(d.acknowledged)),
     // Team worksheet entries (form "team-quote").
     team: payload.form_name === 'team-quote',
+    // Full Production page entries (form "production").
+    production: payload.form_name === 'production',
     enteredBy: s(d.entered_by),
     inquirySource: s(d.inquiry_source),
     originalMessage: s(d.original_message),
@@ -292,7 +301,7 @@ export function inquiryMessageId(q) {
 
 export function subjectFor(q) {
   const when = prettyDate(q.eventDate).replace(/^\w+, /, '');
-  return `${q.team ? 'Team entry' : 'New Inquiry'}: ${when} at ${q.venue || 'venue TBD'}${q.business ? ` · ${q.business}` : ''}`;
+  return `${q.team ? 'Team entry' : q.production ? 'Production Inquiry' : 'New Inquiry'}: ${when} at ${q.venue || 'venue TBD'}${q.business ? ` · ${q.business}` : ''}`;
 }
 
 export function renderEmail(q) {
@@ -331,7 +340,7 @@ export function renderEmail(q) {
 <tr><td style="background:#0A100D;padding:22px 28px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
 <td><img src="${SITE}/images/jersey-strike-logo.png" width="120" alt="Jersey Strike" style="display:block;border:0"></td>
-<td align="right" style="color:#D8B46A;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700">${q.team ? `Team entry · ${esc(q.enteredBy)}` : 'New inquiry'}</td>
+<td align="right" style="color:#D8B46A;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700">${q.team ? `Team entry · ${esc(q.enteredBy)}` : q.production ? 'Full production inquiry' : 'New inquiry'}</td>
 </tr></table></td></tr>
 <tr><td style="padding:26px 28px 4px">
 <div style="font-family:Georgia,'Times New Roman',serif;font-size:26px;line-height:1.2">${esc(q.business || q.contact || 'New inquiry')}</div>
@@ -388,7 +397,7 @@ async function sendEmail(q) {
 function notesText(q) {
   const when = new Date(q.received).toLocaleDateString('en-US', { timeZone: 'America/New_York' });
   if (q.team) return `Entered by ${q.enteredBy || 'team'} from a${/^[aeiou]/i.test(q.inquirySource) ? 'n' : ''} ${(q.inquirySource || 'outside').toLowerCase()} inquiry, ${when}. Full details in Scope of Work.`;
-  return `Website inquiry ${when}. Full details in Scope of Work.`;
+  return `Website ${q.production ? 'full production ' : ''}inquiry ${when}. Full details in Scope of Work.`;
 }
 
 export function airtableFields(q) {

@@ -117,6 +117,20 @@ await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify(s
 const last = calls.filter(c => c.url.includes('airtable')).pop();
 check(last.body.records[0].fields['Services'] === 'Strike crew, Trucking + delivery, Custom fabrication', 'list retried as text for a text column');
 
+// Full Production page form.
+calls.length = 0;
+globalThis.fetch = async (url, opts) => { calls.push({ url, body: JSON.parse(opts.body) }); return new Response('{}', { status: 200 }); };
+const prodPayload = { payload: { form_name: 'production', id: 'prod-1', created_at: '2026-10-26T15:00:00Z', data: {
+  business: 'Jodianne Events', contact_name: 'Jodi', email: 'jodi@example.com', event_date: '2027-09-18', venue: 'Queen City Marina',
+  production_days: '3', guest_count: '250', full_event_budget: '$250k–$500k', production_budget: '$25k–$45k',
+  production_scope: 'Planning + walkthrough; Rigging + ceilings; Strike + inventory', services: 'Full production', scope: 'Disco ball ceiling over the dance floor.' } } };
+const pq = normalize(prodPayload.payload), pt = scopeText(pq);
+check(pq.production && pq.services[0] === 'Full production' && subjectFor(pq).startsWith('Production Inquiry: September 18, 2027 at Queen City Marina'), 'production form: flagged, service + subject');
+check(pt.startsWith('FULL PRODUCTION INQUIRY') && pt.includes('Full event budget: $250k–$500k') && pt.includes('FULL PRODUCTION\nProduction budget: $25k–$45k') && pt.includes('  • Rigging + ceilings'), 'production form: budgets, days + scope in Scope of Work');
+check(normalize({ form_name: 'production', data: {} }).services[0] === 'Full production', 'production form defaults the service');
+await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify(prodPayload) }));
+check(calls.length === 2 && renderEmail(pq).includes('Full production inquiry') && airtableFields(pq).Notes.startsWith('Website full production inquiry'), 'production form: email + Airtable row sent');
+
 // Other forms are ignored.
 calls.length = 0;
 await handler(new Request('https://x/', { method: 'POST', body: JSON.stringify({ payload: { form_name: 'other', data: {} } }) }));
