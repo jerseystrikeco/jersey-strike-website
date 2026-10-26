@@ -19,6 +19,7 @@
 
 import { planRoutes } from './lib/routes.mjs';
 import { planQuote } from './lib/claude.mjs';
+import { staffCandidates } from './lib/staffing.mjs';
 import { priceQuote } from './lib/pricing.mjs';
 import { renderQuoteEmail, renderQuoteText, renderFlagsText, quoteSubject } from './lib/quote-render.mjs';
 import { triggerSecret } from './lib/trigger.mjs';
@@ -39,9 +40,11 @@ const truckish = (inq) =>
 
 export async function draftQuote(inquiry) {
   const routes = await planRoutes(inquiry, { truck: truckish(inquiry) }).catch((e) => ({ available: false, notes: [`Routing failed: ${e.message}`] }));
-  const { plan, docNotes, model } = await planQuote(inquiry, routes);
+  const staff = await staffCandidates(inquiry, { hq: routes.hq, venue: inquiry.venue }).catch((e) => ({ available: false, notes: [`Staffing not checked: ${e.message}`] }));
+  if (staff.notes?.length) console.log('[quote] staffing:', staff.notes.join(' | '));
+  const { plan, docNotes, model } = await planQuote(inquiry, routes, staff);
   const priced = priceQuote(plan, inquiry);
-  return { routes, plan, docNotes, priced, model };
+  return { routes, plan, docNotes, priced, model, staff };
 }
 
 export default async (req) => {
