@@ -26,6 +26,7 @@ Typical shapes:
    - Long-term or outdoor installs (scaffolding, façades, sidewalk sheds): 2 units per ~10 ft of branch/greenery coverage, 1.5 units/ph; working off scaffolding or above 12 ft is slow and needs a safety plan.
    - Linens: 1 unit per ~25 linens to count/bag. Furniture/chairs: 1 unit per ~25 chairs moved.
 3. **Convert to on-site person-hours.** Pick the strike speed by job type:
+   - **~9 units/ph**: bin-and-go strike: everything goes into bins intact, linens bagged, floor swept, and the florist processes vessels/mechanics at their studio. Alyssa: GITP at Park Loft (18 tables, 2 bars, sweetheart) = team of 3 in a 1-hour window.
    - **5 units/ph**: simple collection: bud vases, compotes, a few installs, client packs their own, short carry to a dock/van.
    - **4 units/ph**: typical wedding strike with candles + rentals to studio.
    - **3.5 units/ph**: glass-heavy (150+ candle pieces / hurricanes / tapers + sleeves), "keep all mechanics / chicken wire", labeled-box packing to the florist's system, ground meadows with soil/moss, OR a long carry (NYC street-parked truck, tent on a lawn, stairs).

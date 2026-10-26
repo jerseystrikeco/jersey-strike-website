@@ -43,6 +43,7 @@ export const PLAN_SCHEMA = {
       trips: { type: 'number', description: 'Round trips (install trip and strike trip each count).' },
       rental_days: { type: 'number', description: 'U-Haul only. Pick up day before, return day after (min 2).' },
       uhaul_miles: { type: 'number', description: 'U-Haul only: total miles the U-Haul itself drives (from pickup to return).' },
+      js_owned: { type: 'boolean', description: 'box_truck only: true when it is a Jersey Strike-owned truck.' },
       notes: str } } },
     equipment: { type: 'object', properties: { ladders: numT, skyscraper_ladders: numT, rigging_kit: { type: 'boolean' } } },
     fabrication: { type: 'array', description: 'Custom builds (chuppah, arch, arbor, plinths, stage façade, frames, grids, rings, tabletops, trees). Estimate our cost; the engine prices it.',
@@ -82,6 +83,7 @@ How to plan:
 - Build a detailed running timeline for every crew call, portal to portal (crew departs HQ -> ... -> back at HQ), following the install and strike timelines in the pricing formula exactly (1 hr minimum HQ departure leg, 15 min early studio arrival, 15 min early venue arrival or 30-45 min if parking/dock is hard, load, drive, unload, setup, backload, flip, truck organized, drive home; strike: early prep, client truck reset, strike, pack + strap, delivery, unload/organize, home).
 - Use the drive times and miles provided (they come from Google Maps / truck routing). If none are provided, estimate conservatively and say so in red_flags.
 - Size the team with zones: every task area is a zone with 1-2 people, and every zone must finish inside the client's window (load-in -> photo ready). Strike is sized the same way against breakdown start -> departure.
+- When an attached proposal/production doc conflicts with the inquiry form (date, guest count, table count, pieces), TRUST THE DOCUMENT and flag the mismatch.
 - Use the client's documents (proposal, design guide, flower order, run of show, floor plan, inventory pull report) to count pieces per zone and judge how heavy, fragile and numerous the inventory is. Use that for truck size and load/strike time.
 - Pick vehicles: JS van ($1/mi per van) for small loads; U-Haul box truck sized to the inventory (min 2 rental days: pick up day before, return day after); or driving the client's truck (management fee). U-Haul is never left without a plan for strike: note if it stays parked near the venue.
 - Base fee: count venue days, but waive extra days caused by next-day deliveries/returns that are for our schedule, team safety or convenience (explain in base_fee_note).

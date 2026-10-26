@@ -7,6 +7,8 @@
 
 [functions]
   node_bundler = "esbuild"
+  # pdfkit reads its font files from disk at runtime, so ship it as-is instead of bundling it.
+  external_node_modules = ["pdfkit"]
 
 # Cache images for a week; styles, scripts and pages always fresh.
 [[headers]]

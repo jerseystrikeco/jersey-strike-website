@@ -96,7 +96,7 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
 <div style="font-size:13px;color:#5C574A">${esc((plan.shifts || []).length)} crew calls · up to ${Math.max(0, ...(plan.shifts || []).map((s) => Number(s.team_size) || 0))} people · ${esc(plan.job_type?.replace('_', ' ') || '')}${routes?.hq ? ` · from ${esc(routes.hq.name)} HQ` : ''}</div>
 <div style="margin-top:14px">${btn(recordUrl, 'Open in Airtable', true)}${btn(mailto, `Email ${esc(q.contact || 'client')}`)}</div>
 </td></tr>
-${section('Summary', esc(plan.summary))}
+${section('Summary', esc(plan.summary) + '<div style="margin-top:8px;font-size:13px;color:#5C574A">Client-ready proposal PDF (Trellis layout) attached: review, then forward to the client yourself.</div>')}
 ${section('Quote breakdown', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">${lineRows}${totals}</table><div style="margin-top:10px;font-size:12px;color:#7A6F55;font-style:italic">${esc(FOOTER)}</div>`)}
 ${priced.margin ? section('Margin check (internal)', `<div style="font-size:15px"><b>${priced.margin.pct}% gross margin</b> · ${esc(priced.margin.verdict)} (target ${priced.margin.target}%)</div>
 <div style="margin-top:4px;color:#5C574A">Revenue ${fmt(priced.total)} − est. cost ${fmt(priced.margin.cost)} = ${fmt(priced.margin.gp)} gross profit.${priced.margin.pct < priced.margin.target ? ` ${fmt(priced.margin.neededTotal)} would hit 50%.` : ''}</div>

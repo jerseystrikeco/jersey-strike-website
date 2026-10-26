@@ -9,7 +9,7 @@ Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, 
 - Base fee: $300 per day on site at the venue (establishes the floor). Install day + strike day = $600.
   - Exceptions: no extra base fee when a split or next-day delivery is for our benefit (our schedule, team safety or convenience), e.g. a late-night strike where we deliver back to the studio the next morning. The draft flags these for admin review and doesn't add a base fee.
 - Labor: $65/hr per person for ALL labor types (design planning, set up/install, strike, flips, returns); hours = portal-to-portal timeline × team size
-- Fuel: vans $1/mile per van (two vans = double the miles); box trucks (incl. U-Haul) usually $200 flat per round trip (install trip and strike trip each count as one). Trellis note: by mile or flat $100–$200 per event depending on scope; our fuel cost ≈ $0.70/mile
+- Fuel: vans $1/mile per van (two vans = double the miles); box trucks (incl. U-Haul) $1/mile per round trip, capped at $200 per round trip (short local trips don't burn a full tank; install trip and strike trip each count as one). Trellis note: by mile or flat $100–$200 per event depending on scope; our fuel cost ≈ $0.70/mile
 - U-Haul rental as needed: price it both ways and use whichever is LESS expensive for the client while still profitable for us (billed U-Haul lines ≥ 1.5× our actual cost — floor TO CONFIRM)
   - Method A (Trellis / Wile): $135/day + $2.99/mile, + fuel + management. Our cost: $87.50/day, $1.99/mile. Wile 26ft: 3 days $405 + 200 mi $598 + fuel $200 + mgmt $200 = $1,403 (cost $800.50, 1.79× markup).
   - Method B: (U-Haul cost + 20% taxes/fees) × 2.5, + fuel + management.
@@ -116,6 +116,7 @@ Event header (dates, venues, addresses, florist + contact) → TIMELINE per day/
 - U-Haul profit floor: 1.5× actual cost
 
 ## Admin review
+- claude@jerseystrike.com is internal only: it emails jerseystrike.com addresses only (inquire@, alyssa@, mikaela@, joel@) and never contacts clients. Client replies are drafts for the team. See CLAUDE-EMAIL-RULES.md.
 - Draft quotes email to inquire@jerseystrike.com (goes to all admins); no client reply-to on the review email
 
 ## Still to fill in
