@@ -219,10 +219,10 @@ async function startQuoteDraft(q, recordId) {
   const r = await fetch(`${SITE}/.netlify/functions/draft-quote-background`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-quote-secret': secret },
-    body: JSON.stringify({ inquiry, recordId }),
+    body: JSON.stringify({ inquiry, recordId, secret }),
   });
   if (!r.ok && r.status !== 202) throw new Error(`draft-quote-background ${r.status}`);
-  console.log('[inquiry] quote draft started');
+  console.log(`[inquiry] quote draft started (${r.status}, ${SITE})`);
 }
 
 // ---------- Clean up the raw form data ----------
@@ -285,6 +285,10 @@ function prettyDate(iso) {
 
 const esc = (v) =>
   String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+export function inquiryMessageId(q) {
+  return `<inquiry-${String(q.id || q.received || Date.now()).replace(/[^\w.-]/g, '')}@jerseystrike.com>`;
+}
 
 export function subjectFor(q) {
   const when = prettyDate(q.eventDate).replace(/^\w+, /, '');
@@ -369,6 +373,8 @@ async function sendEmail(q) {
     text: renderText(q),
   };
   if (q.email) body.reply_to = q.email;
+  // Stable Message-ID so the draft quote (draft-quote-background.mjs) threads under this email.
+  body.headers = { 'Message-ID': inquiryMessageId(q) };
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },

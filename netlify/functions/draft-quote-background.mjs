@@ -22,6 +22,8 @@ import { planQuote } from './lib/claude.mjs';
 import { priceQuote } from './lib/pricing.mjs';
 import { renderQuoteEmail, renderQuoteText, renderFlagsText, quoteSubject } from './lib/quote-render.mjs';
 import { triggerSecret } from './lib/trigger.mjs';
+import { subjectFor, inquiryMessageId } from './submission-created.mjs';
+import { proposalPdf, proposalFilename } from './lib/proposal-pdf.mjs';
 
 // Airtable columns for the draft. Add these to the Inquiries table (see LAUNCH-GUIDE.md).
 const DEFAULT_TABLE = 'tblvthafdL2XhCDZt'; // EVENT INQUIRIES + LEADS (same as submission-created)
@@ -44,15 +46,30 @@ export async function draftQuote(inquiry) {
 
 export default async (req) => {
   const secret = triggerSecret();
-  if (!secret || req.headers.get('x-quote-secret') !== secret) return new Response('Forbidden', { status: 403 });
   let body;
   try {
-    body = await req.json();
-  } catch {
+    body = JSON.parse((await req.text()) || '{}');
+  } catch (e) {
+    console.error('[quote] stopped: bad JSON body:', e.message);
     return new Response('Bad request', { status: 400 });
   }
+  // The secret arrives as a header, with a copy in the body in case the header is dropped.
+  const got = req.headers.get('x-quote-secret') || body?.secret || '';
+  console.log(`[quote] invoked: method=${req.method}, key set=${!!process.env.ANTHROPIC_API_KEY}, header=${!!req.headers.get('x-quote-secret')}, body secret=${!!body?.secret}, inquiry=${!!body?.inquiry}`);
+  if (!secret) {
+    console.error('[quote] stopped: ANTHROPIC_API_KEY is not available to this function');
+    return new Response('Forbidden', { status: 403 });
+  }
+  if (got !== secret) {
+    console.error(`[quote] stopped: secret mismatch (got ${got.slice(0, 6) || 'nothing'}…, expected ${secret.slice(0, 6)}…)`);
+    return new Response('Forbidden', { status: 403 });
+  }
   const { inquiry, recordId } = body || {};
-  if (!inquiry) return new Response('Bad request', { status: 400 });
+  if (!inquiry) {
+    console.error('[quote] stopped: no inquiry in body');
+    return new Response('Bad request', { status: 400 });
+  }
+  console.log(`[quote] drafting for ${inquiry.business || inquiry.contact || 'inquiry'} (record ${recordId || 'none'}), model ${process.env.ANTHROPIC_MODEL || 'default'}`);
 
   const base = process.env.AIRTABLE_BASE_ID;
   const table = process.env.AIRTABLE_TABLE || DEFAULT_TABLE;
@@ -71,8 +88,18 @@ export default async (req) => {
   }
 
   const args = { inquiry, ...result, recordUrl };
+  // Client-ready proposal PDF (Trellis layout) for the admin team to review/forward.
+  let attachments;
+  try {
+    const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced });
+    attachments = [{ filename: proposalFilename(inquiry), content: pdf.toString('base64') }];
+  } catch (e) {
+    console.error('[quote] proposal PDF failed:', e.message);
+  }
   const steps = await Promise.allSettled([
-    sendEmail({ subject: quoteSubject(inquiry, result.priced), html: renderQuoteEmail(args), text: renderQuoteText(args) + '\n\n' + renderFlagsText(args) }),
+    // Threaded under the original inquiry email (internal only: no client address anywhere).
+    sendEmail({ subject: `Re: ${subjectFor(inquiry)}`, html: renderQuoteEmail(args), text: `${quoteSubject(inquiry, result.priced)}\n\n` + renderQuoteText(args) + '\n\n' + renderFlagsText(args),
+      headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments }),
     recordId ? updateAirtable(recordId, args) : Promise.reject(new Error('no Airtable record id (Phase 1 save failed)')),
   ]);
   steps.forEach((r, i) => {
@@ -84,15 +111,17 @@ export default async (req) => {
   return new Response('OK');
 };
 
-async function sendEmail({ subject, html, text }) {
+async function sendEmail({ subject, html, text, headers, attachments }) {
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new Error('RESEND_API_KEY is not set');
-  const to = (process.env.QUOTE_TO || process.env.INQUIRY_TO || 'inquire@jerseystrike.com').split(',').map((x) => x.trim()).filter(Boolean);
+  const to = (process.env.QUOTE_TO || process.env.INQUIRY_TO || 'inquire@jerseystrike.com').split(',').map((x) => x.trim()).filter(Boolean)
+    .filter((x) => /@jerseystrike\.com$/i.test(x)); // internal tool: jerseystrike.com addresses only
+  if (!to.length) throw new Error('No @jerseystrike.com recipient configured');
   // No reply_to: replying must never send internal pricing to the client.
   const r = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: process.env.INQUIRY_FROM || 'Jersey Strike Website <inquiries@jerseystrike.com>', to, subject, ...(html ? { html } : {}), text }),
+    body: JSON.stringify({ from: process.env.INQUIRY_FROM || 'Jersey Strike Website <inquiries@jerseystrike.com>', to, subject, ...(html ? { html } : {}), text, ...(headers ? { headers } : {}), ...(attachments?.length ? { attachments } : {}) }),
   });
   if (!r.ok) throw new Error(`Resend ${r.status}: ${await r.text()}`);
 }
