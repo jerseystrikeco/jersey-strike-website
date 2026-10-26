@@ -19,7 +19,7 @@ export const RATES = {
   // Full production jobs (Full Production page, or job_type "full_production"). Modeled on Social Supply (DC).
   production: {
     planningFeePct: 0.12, // "Production planning fee", replaces the 8% admin fee; applied last, on the full subtotal
-    sourcedMargin: 0.5, // things we buy for the job (chandeliers, greenery, disco balls, decor): 50% margin = our cost x 2
+    sourcedMultiplier: 2, // things we buy for the job (chandeliers, greenery, disco balls, decor): our cost x 2 = 50% margin (same as fab materials)
     rentalUpcharge: 0.1, // outside vendor rentals / pass-throughs: our cost + 10% handling (production jobs only)
     depositPct: 0.5, // deposit on the remainder, after the planning fee
     typicalMin: 15000, // drafts flag full productions under this, don't bump
@@ -253,13 +253,13 @@ export function priceQuote(plan, inquiry = {}) {
     } else if (num(r.amount) > 0) add('Equipment', r.label || 'Additional rental', r.note ? `pass-through: ${r.note}` : 'pass-through', num(r.amount));
   }
 
-  // Sourced items (chandeliers, greenery, disco balls, decor we buy for the job): 50% margin = our cost × 2.
+  // Sourced items (chandeliers, greenery, disco balls, decor we buy for the job): our cost × 2 = 50% margin.
   for (const it of plan.sourced_items || []) {
     const c = Math.max(0, num(it.cost));
     if (!c) continue;
-    const m = R.production.sourcedMargin;
+    const m = R.production.sourcedMultiplier;
     costs.push({ what: `${it.label || 'Sourced item'} (our cost)`, amount: c });
-    add('Sourcing', it.label || 'Sourced items', `our cost ${fmt(c)} at ${Math.round(m * 100)}% margin (÷ ${1 - m})${it.note ? `: ${it.note}` : ''}`, c / (1 - m));
+    add('Sourcing', it.label || 'Sourced items', `our cost ${fmt(c)} × ${m}${it.note ? `: ${it.note}` : ''}`, c * m);
   }
   if ((plan.sourced_items || []).some((it) => num(it.cost) > 0)) warnings.push('Sourced item costs are Claude estimates: confirm real prices before quoting.');
 

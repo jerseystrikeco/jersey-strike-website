@@ -31,7 +31,7 @@ Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, 
 Modeled on Social Supply (DC), who charge a 15% design fee up front, a 50% deposit and a $10k minimum.
 - job_type = full_production. Typical full production: $15k–$55k+. Drafts FLAG anything under $15,000 (maybe a crew job instead), never bump.
 - Labor, team, trucking, vehicles, equipment, base fee, travel: priced exactly as above (same rates).
-- Sourced items (chandeliers, greenery, disco balls, lanterns, decor, hardware we buy for the job): 50% margin = our cost × 2. Claude estimates our cost; confirm real prices before quoting.
+- Sourced items (chandeliers, greenery, disco balls, lanterns, decor, hardware we buy for the job): our cost × 2 = 50% margin (same as fabrication materials). Claude estimates our cost; confirm real prices before quoting.
 - Outside vendor rentals / pass-throughs (lift, truss, tent add-ons): our cost + 10% handling.
 - Custom fabrication: same as below (materials × 2 + shop hours × $65).
 - Production planning fee: 12% of the full subtotal, INSTEAD of the 8% admin fee (covers the producer: scoping call, walkthrough, production plan, vendor coordination, close-out report).

@@ -112,7 +112,7 @@ globalThis.fetch = async (url, opts = {}) => {
 await handler(new Request('https://x/', { method: 'POST', headers: { 'x-quote-secret': triggerSecret() }, body: JSON.stringify({ inquiry, recordId: 'recABC' }) }));
 check(calls.some((c) => c.url.includes('resend') && /failed/.test(c.body.subject)), 'if Claude fails, admins get a "needs manual quote" email');
 
-// Full production: 12% planning fee replaces admin, sourced items at 50% margin, rentals +10%.
+// Full production: 12% planning fee replaces admin, sourced items at cost × 2 (50% margin), rentals +10%.
 {
   const prodPlan = { job_type: 'full_production', base_fee_days: 1,
     shifts: [{ label: 'Install', kind: 'install', team_size: 4, depart_hq: '8:00am', back_hq: '6:00pm' }],
@@ -120,7 +120,7 @@ check(calls.some((c) => c.url.includes('resend') && /failed/.test(c.body.subject
   const pp = priceQuote(prodPlan, { business: 'Test Planner', production: true });
   const sourcing = pp.lines.find((l) => l.section === 'Sourcing');
   const lift = pp.lines.find((l) => l.label === 'Scissor lift');
-  check(sourcing.amount === 6000 && lift.amount === 550, 'production: sourced items at 50% margin ($3,000 → $6,000), rentals + 10% ($500 → $550)');
+  check(sourcing.amount === 6000 && lift.amount === 550, 'production: sourced items at cost × 2 = 50% margin ($3,000 → $6,000), rentals + 10% ($500 → $550)');
   check(pp.adminPct === 0.12 && pp.feeLabel === 'Production planning fee' && pp.admin === Math.round(pp.subtotal * 12) / 100, 'production: 12% planning fee replaces the 8% admin fee');
   check(pp.subtotal === 2600 + 6000 + 550 + 300 && pp.warnings.some((w) => /typical full production/.test(w)), 'production: labor + base unchanged; under $15k flagged: ' + pp.subtotal);
   const normal = priceQuote({ ...prodPlan, job_type: 'full_service' }, { business: 'Test Planner' });
