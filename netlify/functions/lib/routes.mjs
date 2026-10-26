@@ -9,6 +9,7 @@ export const HQS = [
 ];
 
 const M_PER_MI = 1609.344;
+export const DRIVE_BUFFER_MIN = Number(process.env.DRIVE_BUFFER_MIN || 15);
 
 async function googleLeg(origin, destination) {
   const key = process.env.GOOGLE_MAPS_API_KEY;
@@ -90,6 +91,9 @@ export async function planRoutes(inquiry, { truck = false } = {}) {
   const ok = options.filter(Boolean).sort((a, b) => a.minutes - b.minutes);
   if (!ok.length) return { available: false, notes };
   const best = ok[0];
+  // Buffer: every drive leg gets +15 min, rounded up to the quarter hour (44 min -> 1 hr).
+  const plan = (m) => (m > 0 ? Math.ceil((m + DRIVE_BUFFER_MIN) / 15) * 15 : 0);
+  for (const leg of best.legs) leg.plan_minutes = plan(leg.minutes);
   notes.push(`Used ${best.hq.name} HQ (${best.minutes} min total loop${ok[1] ? ` vs ${ok[1].minutes} min from ${ok[1].hq.name}` : ''}).`);
 
   if (truck) {
@@ -99,6 +103,7 @@ export async function planRoutes(inquiry, { truck = false } = {}) {
           const t = await hereTruckLeg(leg.from, leg.to);
           leg.truckMiles = t.miles;
           leg.truckMinutes = t.minutes;
+          leg.plan_minutes = plan(t.minutes);
         } catch (e) {
           notes.push(`Truck route ${leg.from} → ${leg.to}: ${e.message}`);
         }
