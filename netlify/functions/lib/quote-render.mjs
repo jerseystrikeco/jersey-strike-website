@@ -2,7 +2,8 @@
 // version saved to the Airtable row.
 import { fmt, RATES } from './pricing.mjs';
 
-const SITE = 'https://jerseystrike.com';
+// Logo is hosted on the Netlify site (jerseystrike.com itself is on Showit).
+const SITE = (process.env.URL && !/jerseystrike\.com/.test(process.env.URL) ? process.env.URL : 'https://jersey-strike.netlify.app').replace(/\/$/, '');
 export const FOOTER =
   'This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.';
 
@@ -39,8 +40,9 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
   const section = (title, body) =>
     `<tr><td style="padding:22px 28px 6px"><div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:${gold}">${esc(title)}</div>` +
     `<div style="border-top:1px solid #E2D9C4;margin-top:8px;padding-top:10px;font-size:14px;line-height:1.55">${body}</div></td></tr>`;
+  // Items are escaped unless already-built HTML is passed as { html }.
   const list = (arr, color = '#0A100D') =>
-    arr?.length ? `<ul style="margin:0;padding-left:18px;color:${color}">${arr.map((x) => `<li style="margin:0 0 6px">${esc(x)}</li>`).join('')}</ul>` : '<span style="color:#A8A391">None</span>';
+    arr?.length ? `<ul style="margin:0;padding-left:18px;color:${color}">${arr.map((x) => `<li style="margin:0 0 6px">${x && x.html ? x.html : esc(x)}</li>`).join('')}</ul>` : '<span style="color:#A8A391">None</span>';
   const td = 'padding:7px 6px;border-bottom:1px solid #EFE9DC;vertical-align:top';
   const money = (n, bold) => `<td style="${td};text-align:right;white-space:nowrap${bold ? ';font-weight:700' : ''}">${fmt(n)}</td>`;
 
@@ -75,7 +77,7 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
     : '';
 
   const flags = [...(priced.grandfathered ? [priced.grandfathered] : []), ...(plan.red_flags || []), ...priced.warnings];
-  const similar = (plan.similar_jobs || []).map((j) => `<b>${esc(j.job)}</b>${j.charged ? ` (${esc(j.charged)})` : ''}: ${esc(j.why)}`);
+  const similar = (plan.similar_jobs || []).map((j) => ({ html: `<b>${esc(j.job)}</b>${j.charged ? ` (${esc(j.charged)})` : ''}: ${esc(j.why)}` }));
   const asks = plan.client_questions?.length
     ? `<div style="margin-top:10px;color:#5C574A">Questions to send the client:</div>${list(plan.client_questions)}` : '';
   const mailto = q.email ? `mailto:${esc(q.email)}?subject=${encodeURIComponent(`Your Jersey Strike quote: ${prettyDate(q.eventDate)}`)}` : '';
