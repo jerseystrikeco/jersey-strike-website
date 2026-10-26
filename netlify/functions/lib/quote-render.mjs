@@ -106,6 +106,7 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
 <div style="margin-top:14px">${btn(recordUrl, 'Open in Airtable', true)}${btn(mailto, `Email ${esc(q.contact || 'client')}`)}</div>
 </td></tr>
 ${section('Summary', esc(plan.summary) + '<div style="margin-top:8px;font-size:13px;color:#5C574A">Client-ready proposal PDF (Trellis layout) attached: review, then forward to the client yourself.</div>')}
+${plan.assumptions?.length ? section('Check before quoting', `<div style="margin-bottom:8px;color:#5C574A">AI draft. These are the calls that drive the price. Push back on any that don't match how the job will really run.</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">${plan.assumptions.map((a) => `<tr><td style="padding:6px 6px;border-bottom:1px solid #EFE9DC;vertical-align:top;width:22%"><b>${esc(a.item)}</b></td><td style="padding:6px 6px;border-bottom:1px solid #EFE9DC;vertical-align:top">${esc(a.assumed)}<div style="color:#7A6F55;font-size:12px">Source: ${esc(a.basis)}${a.if_wrong ? ` · If wrong: ${esc(a.if_wrong)}` : ''}</div></td></tr>`).join('')}</table>`) : ''}
 ${section('Quote breakdown', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px">${lineRows}${totals}</table><div style="margin-top:10px;font-size:12px;color:#7A6F55;font-style:italic">${esc(FOOTER)}</div>`)}
 ${priced.margin ? section('Margin check (internal)', `<div style="font-size:15px"><b>${priced.margin.pct}% gross margin</b> · ${esc(priced.margin.verdict)} (target ${priced.margin.target}%)</div>
 <div style="margin-top:4px;color:#5C574A">Revenue ${fmt(priced.total)} − est. cost ${fmt(priced.margin.cost)} = ${fmt(priced.margin.gp)} gross profit.${priced.margin.pct < priced.margin.target ? ` ${fmt(priced.margin.neededTotal)} would hit 50%.` : ''}</div>
@@ -130,6 +131,11 @@ ${section('Inquiry', `<b>Contact:</b> ${esc(q.contact)} · ${esc(q.email)} · ${
 export function renderQuoteText({ inquiry: q, plan, priced, routes }) {
   const L = [];
   L.push(`DRAFT QUOTE (AI, for admin review): ${fmt(priced.total)}`, '', plan.summary || '', '');
+  if (plan.assumptions?.length) {
+    L.push('CHECK BEFORE QUOTING (AI draft: push back on anything that looks off)');
+    for (const a of plan.assumptions) L.push(`- ${a.item}: ${a.assumed} [source: ${a.basis}]${a.if_wrong ? ` If wrong: ${a.if_wrong}` : ''}`);
+    L.push('');
+  }
   L.push('QUOTE BREAKDOWN');
   for (const l of priced.lines) L.push(`- ${l.label}: ${fmt(l.amount)}  (${l.math}${l.roles ? `; ${l.roles}` : ''})`);
   L.push(`Items subtotal: ${fmt(priced.itemsSubtotal)}`);
@@ -163,6 +169,7 @@ export function renderFlagsText({ plan, priced, routes, docNotes = [] }) {
   const sec = (t, arr) => (arr?.length ? [`${t}:`, ...arr.map((x) => `- ${x}`), ''] : []);
   return [
     ...sec('RED FLAGS', [...(priced.grandfathered ? [priced.grandfathered] : []), ...(plan.red_flags || []), ...priced.warnings]),
+    ...sec('CHECK BEFORE QUOTING', (plan.assumptions || []).map((a) => `${a.item}: ${a.assumed} [source: ${a.basis}]${a.if_wrong ? ` If wrong: ${a.if_wrong}` : ''}`)),
     ...sec('MISSING INFO', plan.missing_info),
     ...sec('ASK THE CLIENT', plan.client_questions),
     ...sec('LOGISTICS', [...(plan.logistics_notes || []), ...(routes?.notes || []), ...docNotes]),

@@ -1,3 +1,4 @@
+import { toMinutes } from './pricing.mjs';
 // Asks Claude to plan the job: timeline per shift, zones, team, vehicles, equipment,
 // logistics, red flags, missing info and similar past jobs. Claude does NOT do the
 // pricing math; pricing.mjs does that from this plan.
@@ -12,7 +13,7 @@ const strArr = { type: 'array', items: str };
 
 export const PLAN_SCHEMA = {
   type: 'object',
-  required: ['summary', 'job_type', 'zones', 'shifts', 'vehicles', 'base_fee_days', 'logistics_notes', 'reasoning', 'red_flags', 'missing_info'],
+  required: ['summary', 'assumptions', 'job_type', 'zones', 'shifts', 'vehicles', 'base_fee_days', 'logistics_notes', 'reasoning', 'red_flags', 'missing_info'],
   properties: {
     summary: { type: 'string', description: '2-3 sentences: what the job is and the recommended approach.' },
     job_type: { type: 'string', enum: ['full_service', 'strike_only', 'install_only', 'studio_only', 'other'],
@@ -71,6 +72,16 @@ export const PLAN_SCHEMA = {
     lean_option: { type: 'string', description: 'For first-time or price-sensitive clients: a leaner alternative (smaller team/shorter scope/strike-only) with its tradeoffs, in one or two sentences. Empty if not useful.' },
     similar_jobs: { type: 'array', items: { type: 'object', properties: { job: str, why: str, charged: str } } },
     task_list: { ...strArr, description: 'Scope / task list in the style of the proposal template, grouped by event.' },
+    assumptions: {
+      type: 'array',
+      description: 'The 3-6 judgment calls that drive this price, written so the admin team will check and challenge them (not take them on faith). Most price-sensitive first.',
+      items: { type: 'object', required: ['item', 'assumed', 'basis', 'if_wrong'], properties: {
+        item: { type: 'string', description: 'e.g. "Team size", "Strike pace", "Return drive", "Unload time", "Table count", "Vehicle"' },
+        assumed: { type: 'string', description: 'What the draft assumed, with the number, e.g. "3 people, 1 hr strike"' },
+        basis: { type: 'string', description: 'Where it came from: client form, their document, Google Maps, our formula, a past job, or Claude\'s judgment (say so plainly when it is a guess)' },
+        if_wrong: { type: 'string', description: 'What changes and roughly by how much if it is wrong, e.g. "+1 person = +$228"' },
+      } },
+    },
     staffing: {
       type: 'array',
       description: 'Suggested crew per crew call, picked from the STAFF SHORTLIST only (never invent names). Empty if no shortlist was given.',
@@ -142,6 +153,7 @@ How to plan:
 - Base fee: count venue days, but waive extra days caused by next-day deliveries/returns that are for our schedule, team safety or convenience (explain in base_fee_note).
 - Destination job (hotel + $50/person/day meals) only if a shift is over 12 hrs on site AND the drive home is over 2 hrs; flag back-to-back far-away days for admin to decide.
 - Studio processing / reset days are flat per person (studio_days), not hourly.
+- assumptions: this draft is a starting point for people who know the jobs better than you do. List the judgment calls behind the price (team size, pace, timings, drive, unload, counts, vehicle), say plainly which ones are your guesses vs. from the client, Google Maps or the formula, and what each would change in dollars if wrong. Never sound more certain than the evidence is.
 - Staffing: when a STAFF SHORTLIST is given, fill "staffing" with a suggested crew for every crew call, matching team_size. Use only names from the shortlist. Pick by: (1) availability (never anyone booked that day; note day-before/after bookings and heavy weeks); (2) SCHEDULE PRIORITY (1 = guaranteed weekly hours, schedule first; then 2, 3, 4; 5 = as needed, only for big/new jobs or when a team lead is needed); (3) Team Rank (A > B > TRAINEE; every crew call needs at least one A as Lead, and a TRAINEE only alongside an A); (4) skills the scope needs (TRUCK DRIVER for box trucks/U-Hauls/client trucks, Rigging for hung or overhead work, Floral Designer for design help, Wile Approved = YES for any Wile Events job); (5) home HQ that matches the job's HQ and a shorter drive (we pay their drive to HQ). Give 1-2 backups. Flag a peak day (calendar shows several events or many staff booked), anyone stretched thin, and skill gaps. If the shortlist is not available, leave staffing empty and say why in missing_info.
 - Team size: follow past-jobs/00-job-sizing.md (zones → work units → person-hours → fit the window → sanity-check vs similar jobs).
 - Solo (team of 1) only when ALL are true: very easy job, daytime, easy/short drive, no ladders/rigging; say it needs a very strong team member. Night strikes and anything with ladders get at least 2.
@@ -231,5 +243,32 @@ Plan the preliminary quote and submit it with the submit_quote_plan tool.`,
   const msg = await r.json();
   const tool = msg.content?.find((c) => c.type === 'tool_use');
   if (!tool) throw new Error(`Claude returned no plan (stop_reason: ${msg.stop_reason})`);
-  return { plan: tool.input, docNotes, usage: msg.usage, model: msg.model };
+  return { plan: fixTimeline(tool.input, { studioIsHq: !!(inquiry.studio && routes?.hq && sameAddress(inquiry.studio, routes.hq.address)) }), docNotes, usage: msg.usage, model: msg.model };
+}
+
+// Timeline guard (code, not Claude): the unload at the last stop is real time on the clock.
+// If the last step is "arrive + unload" with no separate finish, add the finish time
+// (van ~15 min, U-Haul/box truck ~60 min, 26 ft ~90 min, or the minutes Claude wrote)
+// and make sure back_hq (what we bill to) is that finish time.
+const fmtTime = (m) => { m = ((m % 1440) + 1440) % 1440; const h = Math.floor(m / 60), mm = m % 60; return `${h % 12 || 12}:${String(mm).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`; };
+const sameAddress = (a, b) => { const k = (x) => String(x).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 14); return k(a) === k(b); };
+export function fixTimeline(plan, { studioIsHq = false } = {}) {
+  const v = (plan.vehicles || []).map((x) => `${x.kind} ${x.label}`).join(' ');
+  const defaultUnload = /26 ?ft/i.test(v) ? 90 : /box_truck|uhaul|client_truck|box truck|ft/i.test(v) ? 60 : 15;
+  for (const s of plan.shifts || []) {
+    const steps = s.steps || [];
+    const last = steps[steps.length - 1];
+    if (!last || !/unload/i.test(last.label) || !/arriv/i.test(last.label)) continue;
+    const at = toMinutes(last.time);
+    if (at == null) continue;
+    const mins = Number(last.label.match(/(\d+)\s*min/i)?.[1]) || defaultUnload;
+    const done = at + mins;
+    last.label = last.label.replace(/\s*[—-]+\s*DONE\s*$/i, '').replace(/,?\s*done\s*$/i, '');
+    const home = studioIsHq || /studio is (?:at )?HQ|= ?HQ|back at HQ/i.test(last.label);
+    steps.push({ time: fmtTime(done), label: home ? 'Done (back at HQ)' : 'Unload done, depart for HQ' });
+    const back = toMinutes(s.back_hq);
+    const late = (b) => { let d = b - toMinutes(s.depart_hq); if (d <= 0) d += 1440; return d; };
+    if (home && (back == null || late(back) < late(done))) s.back_hq = fmtTime(done);
+  }
+  return plan;
 }
