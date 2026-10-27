@@ -45,7 +45,7 @@ export async function draftQuote(inquiry) {
   const staff = await staffCandidates(inquiry, { hq: routes.hq, venue: inquiry.venue }).catch((e) => ({ available: false, notes: [`Staffing not checked: ${e.message}`] }));
   if (staff.notes?.length) console.log('[quote] staffing:', staff.notes.join(' | '));
   const { plan, docNotes, model } = await planQuote(inquiry, routes, staff);
-  const priced = priceQuote(plan, inquiry);
+  const priced = priceQuote(plan, inquiry, { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '' });
   return { routes, plan, docNotes, priced, model, staff };
 }
 

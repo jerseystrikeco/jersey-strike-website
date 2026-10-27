@@ -30,7 +30,7 @@ check(strike.total === 885.6 && strike.warnings.some((w) => /Under the \$1,500.0
 const bat = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:45pm', back_hq: '2:00am' }], vehicles: [{ kind: 'van', label: 'JS van', round_trip_miles: 35 }] }, {});
 check(bat.itemsSubtotal === 863.75 && bat.total === 1256.85 && bat.warnings.some((w) => /strike minimum/.test(w)), 'Battello-size strike for a standard client: $1,256.85 + minimum flag');
 const aptp = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:45pm', back_hq: '2:00am' }], vehicles: [{ kind: 'van', label: 'JS van', round_trip_miles: 35 }] }, { business: 'A Petal To Peddle' });
-check(aptp.total === 1256.85 && !aptp.warnings.length, 'A Petal to Peddle grandfathered: no minimum flag');
+check(aptp.total === 1256.85 && !aptp.warnings.some((w) => /minimum/.test(w)), 'A Petal to Peddle grandfathered: no minimum flag');
 const lily = priceQuote({ job_type: 'strike_only', base_fee_days: 1, shifts: [{ label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:30pm', back_hq: '3:45am' }], vehicles: [{ kind: 'van', label: 'Van', round_trip_miles: 70 }] }, { business: 'A Lily Among Thorns' });
 check(lily.subtotal === 1588.75 && lily.admin === 127.1 && lily.discount.amount === -428.96 && lily.total === 1286.89, `A Lily Among Thorns: 8% admin then 25% family discount = $${lily.total}`);
 check(priceUhaul({ days: 1, miles: 50 }).days === 2, 'U-Haul minimum 2 days');

@@ -111,12 +111,14 @@ ${section('Quote breakdown', `<table role="presentation" width="100%" cellpaddin
 ${priced.margin ? section('Margin check (internal)', `<div style="font-size:15px"><b>${priced.margin.pct}% gross margin</b> · ${esc(priced.margin.verdict)} (target ${priced.margin.target}%)</div>
 <div style="margin-top:4px;color:#5C574A">Revenue ${fmt(priced.total)} − est. cost ${fmt(priced.margin.cost)} = ${fmt(priced.margin.gp)} gross profit.${priced.margin.pct < priced.margin.target ? ` ${fmt(priced.margin.neededTotal)} would hit 50%.` : ''}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;font-size:12px;color:#5C574A">${priced.margin.costs.map((c) => `<tr><td style="padding:2px 0">${esc(c.what)}</td><td style="padding:2px 0;text-align:right">${fmt(c.amount)}</td></tr>`).join('')}</table>
-<div style="margin-top:6px;font-size:12px;color:#7A6F55">Team pay $30/hr ($45 major holidays) incl. ~1 hr home↔HQ drive per person per call; fuel $0.70/mi; pass-throughs at cost. Excludes payroll taxes/insurance (covered by base fee + admin).</div>`) : ''}
+<div style="margin-top:6px;font-size:12px;color:#7A6F55">Team pay $30/hr ($45 major holidays) incl. ~1 hr home↔HQ drive per person per call; our fuel cost ~$0.70/mi (clients are billed $1/mi); pass-throughs at cost. Excludes payroll taxes/insurance (covered by base fee + admin).</div>`) : ''}
 ${priced.fabs?.length ? section('Fabrication: Alyssa, check with Larry', fabSection(priced)) : ''}
 ${section('Red flags', list(flags, '#8A2E1F'))}
 ${section('Missing info', list(plan.missing_info) + asks)}
 ${section('Timeline', timeline || '<span style="color:#A8A391">None</span>')}
 ${zones ? section('Zones + team', `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px"><tr><td style="${td};color:${gold}">Zone</td><td style="${td};color:${gold}">Tasks</td><td style="${td};color:${gold};text-align:center">Team</td></tr>${zones}</table>`) : ''}
+${priced.reach ? section('Reach note (ceiling / pole height)', `<b>${esc(priced.reach.height_ft ? `${priced.reach.height_ft} ft` : 'Height unknown')}</b>${priced.reach.working_height_ft ? ` · working height ${esc(priced.reach.working_height_ft)} ft` : ''} · source: ${esc(priced.reach.height_source || 'unknown')}${priced.reach.ladders_chosen ? `<div style="margin-top:4px">${esc(priced.reach.ladders_chosen)}</div>` : ''}${priced.reach.notes ? `<div style="color:#5C574A;margin-top:4px">${esc(priced.reach.notes)}</div>` : ''}`) : ''}
+${priced.gear?.length ? section('Vehicles + gear pulled', list(priced.gear)) : ''}
 ${section('Logistics', list([...(plan.logistics_notes || []), ...(routes?.notes || [])]) + legs + (uhaul ? `<div style="margin-top:12px">${uhaul}</div>` : ''))}
 ${section('Reasoning', list([...(plan.reasoning || []), ...(plan.base_fee_note ? [`Base fee: ${plan.base_fee_note}`] : [])]))}
 ${plan.client_history || plan.lean_option ? section('Client history', `${esc(plan.client_history || '')}${plan.lean_option ? `<div style="margin-top:8px"><b>Leaner option:</b> ${esc(plan.lean_option)}</div>` : ''}`) : ''}
@@ -148,6 +150,8 @@ export function renderQuoteText({ inquiry: q, plan, priced, routes }) {
     L.push(`${[s.date, s.label].filter(Boolean).join(' · ')}: JS Team of ${s.team_size}${s.roles ? ` (${s.roles})` : ''}`);
     for (const st of s.steps || []) L.push(`  ${st.time} - ${st.label}`);
   }
+  if (priced.reach) L.push('', `REACH NOTE: ${priced.reach.height_ft ? `${priced.reach.height_ft} ft` : 'height unknown'}${priced.reach.working_height_ft ? `, working height ${priced.reach.working_height_ft} ft` : ''} (source: ${priced.reach.height_source || 'unknown'}). ${priced.reach.ladders_chosen || ''}`);
+  if (priced.gear?.length) { L.push('', 'VEHICLES + GEAR PULLED'); for (const g of priced.gear) L.push(`- ${g}`); }
   if (plan.zones?.length) { L.push('', 'ZONES'); for (const z of plan.zones) L.push(`- ${z.name} (${z.team}): ${z.tasks || ''}`); }
   if (priced.margin) L.push('', `MARGIN: ${priced.margin.pct}% gross (${priced.margin.verdict}; target 50%). Cost ~${fmt(priced.margin.cost)}${priced.margin.pct < 50 ? `; ${fmt(priced.margin.neededTotal)} hits 50%` : ''}.`);
   if (priced.uhauls.length) { L.push('', 'U-HAUL'); for (const u of priced.uhauls) L.push(`- ${u.label}: A ${fmt(u.a.amount)} vs B ${fmt(u.b.amount)}. ${u.why}`); }

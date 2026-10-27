@@ -4,6 +4,8 @@
 // dollar calculation, so the math is exact and every line shows its work.
 // To change a rate, change it here AND in PRICING-FORMULA.md (Claude reads that file).
 
+import { ladderLines, checkInventory, checkReach } from './inventory.mjs';
+
 export const RATES = {
   laborPerHour: 65, // all labor types
   // Premium labor: +$10/hr per trigger on that crew call, max +$20 (=$75 / $85).
@@ -146,7 +148,7 @@ export function priceUhaul({ days, miles, quotedCost }) {
 }
 
 // plan: Claude's structured plan (see claude.mjs schema). inquiry: normalized form data.
-export function priceQuote(plan, inquiry = {}) {
+export function priceQuote(plan, inquiry = {}, ctx = {}) {
   const R = RATES;
   const g = clientRules(inquiry.business);
   const production = !!inquiry.production || plan.job_type === 'full_production';
@@ -195,13 +197,13 @@ export function priceQuote(plan, inquiry = {}) {
 
   // Vehicles
   for (const v of plan.vehicles || []) {
-    const count = Math.max(1, Math.round(num(v.count, 1)));
+    const count = v.kind === 'van' && v.js_van === 'both' ? Math.max(2, Math.round(num(v.count, 2))) : Math.max(1, Math.round(num(v.count, 1)));
     const trips = Math.max(1, Math.round(num(v.trips, 1)));
     const rt = Math.max(0, Math.round(num(v.round_trip_miles)));
     const label = v.label || v.kind;
     if (v.kind === 'van') {
       const miles = rt * trips * count;
-      costs.push({ what: `${label}: ${miles} mi fuel`, amount: miles * R.cost.fuelPerMile });
+      costs.push({ what: `${label}: OUR fuel cost, ${miles} mi × $0.70 (client is billed $1/mi above)`, amount: miles * R.cost.fuelPerMile });
       add('Vehicles', label, `${plural(count, 'van')} × ${rt} mi round trip × ${plural(trips, 'trip')} × ${fmt(R.vanPerMile)}/mi`, miles * R.vanPerMile);
     } else if (v.kind === 'uhaul') {
       const miles = num(v.uhaul_miles) > 0 ? num(v.uhaul_miles) : rt * trips;
@@ -220,7 +222,7 @@ export function priceQuote(plan, inquiry = {}) {
       add('Vehicles', `${label}: truck management (driving client's truck)`,
         `${plural(trips, 'round trip')} × greater of ${fmt(R.managementMinClientTruck)} or ${rt} mi × ${fmt(R.managementPerMile)}`, per * trips * count);
     } else if (v.kind === 'box_truck') {
-      costs.push({ what: `${label}: fuel`, amount: rt * trips * count * R.cost.fuelPerMile });
+      costs.push({ what: `${label}: OUR fuel cost (× $0.70/mi)`, amount: rt * trips * count * R.cost.fuelPerMile });
       const bf = Math.min(R.boxTruckFuelPerRoundTrip, rt * R.boxTruckFuelPerMile);
       add('Vehicles', `${label}: fuel`, `${plural(trips * count, 'round trip')} × ${bf < R.boxTruckFuelPerRoundTrip ? `${rt} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (max)`}`, trips * count * bf);
       if (!v.js_owned) warnings.push(`"${label}" is a box truck that isn't a U-Haul or the client's. Only fuel is charged; confirm whose truck it is.`);
@@ -242,8 +244,7 @@ export function priceQuote(plan, inquiry = {}) {
 
   // Equipment
   const eq = plan.equipment || {};
-  if (num(eq.ladders) > 0) add('Equipment', 'Ladders', `${eq.ladders} × ${fmt(R.ladder)}`, num(eq.ladders) * R.ladder);
-  if (num(eq.skyscraper_ladders) > 0) add('Equipment', 'Skyscraper ladder (12–24 ft)', `${eq.skyscraper_ladders} × ${fmt(R.skyscraperLadder)}`, num(eq.skyscraper_ladders) * R.skyscraperLadder);
+  for (const l of ladderLines(eq)) add('Equipment', l.label, `${l.count} × ${fmt(l.price)}`, l.count * l.price);
   if (eq.rigging_kit) add('Equipment', 'Rigging tool kit', 'flat', R.riggingKit);
   for (const r of plan.additional_rentals || []) {
     if (num(r.amount) > 0 && !r.js_owned) costs.push({ what: `${r.label || 'Rental'} (pass-through)`, amount: num(r.amount) });
@@ -316,8 +317,12 @@ export function priceQuote(plan, inquiry = {}) {
   const perPerson = (plan.shifts || []).length ? personHrs / Math.max(1, ...(plan.shifts || []).map((s) => num(s.team_size))) : 0;
   if (perPerson > R.cost.overtimeAfter * 0.6) warnings.push(`About ${Math.round(perPerson)} hrs per person on this job: check the crew's weekly hours. Over 40 clocked = overtime at $45/hr.`);
 
+  // Inventory, vehicles + reach (code checks, so a short ladder or a third van never slips through)
+  const inv = checkInventory(plan, { otherEvents: ctx.otherEvents || [], hqName: ctx.hqName || '' });
+  warnings.unshift(...checkReach(plan, inquiry), ...inv.warnings);
+
   return {
-    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings,
+    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null,
     grandfathered: g ? g.note : '',
   };
 }

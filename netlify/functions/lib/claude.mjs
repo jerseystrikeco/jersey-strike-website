@@ -3,6 +3,7 @@ import { toMinutes } from './pricing.mjs';
 // logistics, red flags, missing info and similar past jobs. Claude does NOT do the
 // pricing math; pricing.mjs does that from this plan.
 import { FORMULA, PAST_JOBS } from './knowledge.generated.mjs';
+import { inventoryText } from './inventory.mjs';
 
 const MODEL = () => process.env.ANTHROPIC_MODEL || 'claude-opus-4-5';
 const MAX_INLINE_BYTES = 20 * 1024 * 1024;
@@ -38,6 +39,8 @@ export const PLAN_SCHEMA = {
     studio_days: { type: 'array', items: { type: 'object', required: ['people'], properties: { label: str, date: str, people: numT } } },
     vehicles: { type: 'array', items: { type: 'object', required: ['kind', 'label'], properties: {
       kind: { type: 'string', enum: ['van', 'uhaul', 'client_truck', 'box_truck'] },
+      js_van: { type: 'string', enum: ['VANessa', 'MINIvan', 'both'], description: 'van only: which of our two vans (count 2 = both).' },
+      crew_only: { type: 'boolean', description: 'MINIvan only: true when it just transports crew and carries nothing (seats 4-6 instead of 2).' },
       label: { type: 'string', description: 'e.g. "Wedding: 26ft box truck"' },
       count: numT,
       round_trip_miles: numT,
@@ -46,7 +49,18 @@ export const PLAN_SCHEMA = {
       uhaul_miles: { type: 'number', description: 'U-Haul only: total miles the U-Haul itself drives (from pickup to return).' },
       js_owned: { type: 'boolean', description: 'box_truck only: true when it is a Jersey Strike-owned truck.' },
       notes: str } } },
-    equipment: { type: 'object', properties: { ladders: numT, skyscraper_ladders: numT, rigging_kit: { type: 'boolean' } } },
+    equipment: { type: 'object', description: 'What we pull from OUR inventory (see INVENTORY). Counts per job.', properties: {
+      ladders_list: { type: 'array', description: 'Each ladder type and how many. Use this instead of ladders/skyscraper_ladders.', items: { type: 'object', required: ['type', 'count'], properties: {
+        type: { type: 'string', enum: ['skyscraper', 'podium', 'aframe_12', 'lg_8_12', 'lg_5_10', 'lg_4_8', 'std_6', 'step'] }, count: numT, why: str } } },
+      hand_trucks: numT, folding_wagons: numT, xl_lawn_cart: numT, furniture_dollies: numT, kitchen_cart: numT, gorilla_cart: numT,
+      strike_kits: numT, rigging_kit: { type: 'boolean' }, winch: { type: 'boolean' },
+      ladders: { type: 'number', description: 'Legacy; use ladders_list.' }, skyscraper_ladders: { type: 'number', description: 'Legacy; use ladders_list.' } } },
+    reach_note: { type: 'object', description: 'REQUIRED for any ceiling, tent pole, hung or overhead install. How high we work and how we reach it.', properties: {
+      height_ft: { type: 'number', description: 'Floor to ceiling / tent pole / attachment point, in ft. 0 if unknown.' },
+      working_height_ft: { type: 'number', description: 'Highest point the crew must reach/attach at, in ft.' },
+      height_source: { type: 'string', enum: ['client', 'venue_doc', 'past_job', 'assumed', 'unknown'] },
+      ladders_chosen: { type: 'string', description: 'Which ladders reach it and why (e.g. "4 podiums reach 14 ft; Skyscraper for the 18 ft peak").' },
+      notes: str } },
     fabrication: { type: 'array', description: 'Custom builds (chuppah, arch, arbor, plinths, stage façade, frames, grids, rings, tabletops, trees). Estimate our cost; the engine prices it.',
       items: { type: 'object', required: ['label', 'materials_cost', 'shop_hours', 'confidence'], properties: {
         label: str, description: { type: 'string', description: 'What it is, dimensions, finish, how it breaks down/transports.' },
@@ -153,6 +167,8 @@ How to plan:
 - When an attached proposal/production doc conflicts with the inquiry form (date, guest count, table count, pieces), TRUST THE DOCUMENT and flag the mismatch.
 - Use the client's documents (proposal, design guide, flower order, run of show, floor plan, inventory pull report) to count pieces per zone and judge how heavy, fragile and numerous the inventory is. Use that for truck size and load/strike time.
 - Pick vehicles: JS van ($1/mi per van) for small loads; U-Haul box truck sized to the inventory (min 2 rental days: pick up day before, return day after); or driving the client's truck (management fee). U-Haul is never left without a plan for strike: note if it stays parked near the venue.
+- Inventory + vehicles (see INVENTORY below): plan what this job pulls from our own stock in "equipment" (each ladder type in ladders_list, carts, strike kits, rigging kit, winch) and name the van(s) with js_van. We own TWO vans only: VANessa (extended cargo van, 12 ft interior rear doors to dash) and MINIvan (10 ft). Anything beyond what those two hold, more than 2 vans, or a ladder too long for the van, needs a rental (U-Haul cargo van or box truck): add it to vehicles so it is priced in, don't leave it for admin to find. Ladders decide the vehicle too: the Skyscraper and the 12 ft A-frame only fit VANessa (or a truck), podiums are tight in MINIvan, and 3+ long ladders take most of a van floor. If the job needs more of anything than we own (ladders, carts, dollies, kits), add the rental/purchase to additional_rentals with an estimated cost and say so in red_flags. Every crew call normally takes a strike kit (we have 4). Ladder work counts against reach: pick ladders whose reach covers the working height. Crew ride together from HQ, so seats matter: VANessa seats only 2 but has a ladder roof rack (long ladders ride on top); MINIvan seats 2 up front when it carries a load (deliveries), and 4-6 people only when it carries nothing and just transports crew (set crew_only); a U-Haul/box truck cab seats ~3. Match vehicles to crew size and load (e.g. crew of 4 with a delivery = VANessa 2 + MINIvan 2 both loaded; crew of 6 where VANessa holds the whole load = VANessa 2 + MINIvan crew_only 4), and in staffing say who drives which vehicle (TRUCK DRIVER for trucks) and who rides where.
+- Ceiling / tent pole / hung / overhead installs ALWAYS get a reach_note: the ceiling or pole height, the working height, where the number came from, and which ladders reach it. If the client didn't give the height, set height_source "unknown" (or "assumed" with your best guess for timing), put the height question first in client_questions, and add a red flag. Over 20 ft = extreme_access; over 24 ft = beyond our Skyscraper, plan a lift rental.
 - Base fee: count venue days, but waive extra days caused by next-day deliveries/returns that are for our schedule, team safety or convenience (explain in base_fee_note).
 - Destination job (hotel + $50/person/day meals) only if a shift is over 12 hrs on site AND the drive home is over 2 hrs; flag back-to-back far-away days for admin to decide.
 - Studio processing / reset days are flat per person (studio_days), not hourly.
@@ -172,6 +188,9 @@ How to plan:
 - Be specific and practical. Red flags = things that could blow the timeline or budget (tight windows, vague scope, unknown access/dock, union venue, ceiling/rigging work, high ladder work, weather for outdoor installs, second venues, missing docs). Missing info = what you'd need to firm up the quote.
 
 Today is ${new Date().toISOString().slice(0, 10)}.
+
+=== INVENTORY (what Jersey Strike owns) ===
+${inventoryText()}
 
 === PRICING FORMULA (source of truth) ===
 ${FORMULA}
