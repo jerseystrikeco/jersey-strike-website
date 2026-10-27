@@ -6,7 +6,7 @@ Price = total timeline hours × team size × $65/hr, + vehicles, + infrastructur
 Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, INCLUDING the 8% admin fee. Drafts FLAG jobs under the minimum but don't bump them; the admin team decides (many past small jobs went out under).
 
 ## Line items
-- Base fee: $300 per day on site at the venue (establishes the floor). Install day + strike day = $600.
+- Base fee: $300 per service day on site at the venue (establishes the floor). Install and strike on different days = $600. An install early in the day and the strike that same night (even if the strike starts at or runs past midnight) are ONE service day = $300 (Alyssa, 10/27/26).
   - Exceptions: no extra base fee when a split or next-day delivery is for our benefit (our schedule, team safety or convenience), e.g. a late-night strike where we deliver back to the studio the next morning. The draft flags these for admin review and doesn't add a base fee.
 - Labor: $65/hr per person for ALL labor types (design planning, set up/install, strike, flips, returns); hours = portal-to-portal timeline × team size
 - Fuel: vans $1/mile per van (two vans = double the miles); box trucks (incl. U-Haul) $1/mile per round trip, capped at $200 per round trip (short local trips don't burn a full tank; install trip and strike trip each count as one). Trellis note: by mile or flat $100–$200 per event depending on scope; our fuel cost ≈ $0.70/mile
@@ -18,7 +18,7 @@ Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, 
   - Install and strike on different dates: keep one rental through both if the dates are consecutive or it saves mileage (bulk U-Haul rate with mileage included); otherwise price two separate rentals. Draft shows which it chose and why.
   - Draft shows both methods' math and which one it picked.
 - Truck management fee: $1/mile round trip. Per Trellis note, applies whether we supply the U-Haul or drive the client's truck; $200 minimum when it's the client's truck. (TO CONFIRM vs. earlier 'client's truck only')
-- Ladders: $50 per ladder; the Skyscraper (12–24 ft) is $150
+- Ladders: $50 per ladder; the Skyscraper (12–24 ft) is $150 (inventory below)
 - Rigging tool kit: $100 flat
 - Any additional rental costs
 - Destination job = not safe for the team to drive home: more than 12 hours worked on site AND more than 2 hours' drive home. The draft also flags back-to-back days far from HQ (e.g. late strike, then early install the next day) as a possible hotel night for admin to decide.
@@ -26,6 +26,16 @@ Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, 
 - Meal allowance (destination jobs): $50 per day per person
 - Studio days (processing, prep, reset): flat $450 per person per day
 - Admin fee: 8% of everything else (applied last, on the full subtotal)
+
+## Full production (Full Production page inquiries, or any job where we produce the whole build)
+Modeled on Social Supply (DC), who charge a 15% design fee up front, a 50% deposit and a $10k minimum.
+- job_type = full_production. Typical full production: $15k–$55k+. Drafts FLAG anything under $15,000 (maybe a crew job instead), never bump.
+- Labor, team, trucking, vehicles, equipment, base fee, travel: priced exactly as above (same rates).
+- Sourced items (chandeliers, greenery, disco balls, lanterns, decor, hardware we buy for the job): our cost × 2 = 50% margin (same as fabrication materials). Claude estimates our cost; confirm real prices before quoting.
+- Outside vendor rentals / pass-throughs (lift, truss, tent add-ons): our cost + 10% handling.
+- Custom fabrication: same as below (materials × 2 + shop hours × $65).
+- Production planning fee: 12% of the full subtotal, INSTEAD of the 8% admin fee (covers the producer: scoping call, walkthrough, production plan, vendor coordination, close-out report).
+- Terms: the 12% planning fee is invoiced at booking, due before planning begins and non-refundable if the event is cancelled; then a 50% deposit on the remainder holds the date. (Replaces the 15% retainer for productions.)
 
 ## Margin target (internal)
 Aim for **50% gross profit on every job**. Cost = team pay $30/hr (all jobs; $45 on major holidays; overtime after 40 hrs clocked in a week) × (portal-to-portal hours + each person's drive between home and HQ, ~1 hr round trip assumed) + studio days (8 hrs × $30) + fuel ~$0.70/mi + U-Haul actual cost + fab materials/shop time + pass-throughs (rentals, hotel, meals, tolls). Each draft shows the margin, flags anything under 50% and gives the total that would hit 50%. Under 40% = "not viable as quoted".
@@ -61,6 +71,32 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 - Floralaine (Taylor Diglio, Glen Ridge): repeat, very organized, pays full quotes (would have paid ~$2,800 for Cooper Hewitt). Quote straight.
 - A Lily Among Thorns (Isabel Garcia, Bergenfield): 25% family discount off the total, taken after the 8% admin fee. Draft checks the business name against this list and notes when an old rate applies.
 - Garden in the Pines (GITP, Alyssa's floral studio, 1404 Circle Dr, Forked River): Jersey Strike's sister company. Its studio IS the Forked River HQ, so a job for GITP ends when the unload at the studio is done: no extra drive back to HQ. Not a first-time client, so skip the first-time / lean-option talk. The $1,500 strike / $5,000 full-service minimums still get flagged for GITP like everyone else.
+
+## Vehicles, ladders + gear we own (build rentals into the quote)
+Every draft lists what the job pulls from our stock and flags anything we don't have, so the rental gets priced in up front.
+- **Vans (2 only):** VANessa, extended cargo van, 12 ft interior rear doors to dash, **2 seats only**, with a **ladder roof rack** (long ladders ride on top, about 4 at a time). MINIvan, 10 ft interior rear doors to dash: **2 seats up front when it carries a load** (deliveries); **4–6 people** (back + front) only when the job doesn't need it to carry anything (crew transport only).
+- **Seats / riding together:** the crew rides from HQ together, so match vehicles to crew size: VANessa 2, MINIvan 2 when loaded or 4–6 when it only moves crew, U-Haul/box truck cab ~3. Staffing says who drives what (TRUCK DRIVER for trucks) and who rides where. Not enough seats → more in MINIvan, another vehicle, or mileage for a separate car (flagged). Anything beyond what these two hold, a third vehicle, or a ladder too long for the van = rental (U-Haul cargo van or box truck), priced in the quote.
+- **Ladders** (reach; most compact length for transport = the low end of the ladder's size range, e.g. 12–24 ft → 12 ft):
+  - (1) Skyscraper 12–24 ft extension: 24 ft reach; 12 ft compact → VANessa (roof rack or inside) or a truck only. $150
+  - (4) Podium ladders, 12–14 ft reach; 12 ft compact → VANessa (roof rack or inside) or a truck, not MINIvan. $50 each
+  - (1) 12 ft A-frame, 15 ft reach; 12 ft compact → VANessa (roof rack or inside) or a truck only. $50
+  - (1) Little Giant 8–12 ft, max 15 ft reach; 8 ft compact. $50
+  - (1) Little Giant 5–10 ft, max 13–14 ft reach; 5 ft compact. $50
+  - (1) Little Giant 4–8 ft, max 10–12 ft reach; 4 ft compact. $50
+  - (2) Standard 6 ft ladders, max 8–10 ft reach; 6 ft compact. $50 each
+  - (2) Step ladders, 6–7 ft reach; 6 ft compact. $50 each
+  - 3+ long ladders (10 ft+ compact) take most of a van floor: use VANessa's roof rack, check the rest fit with the client's load, or add a U-Haul.
+- **Carts:** (4) hand trucks/carts, (3) folding wagons, (1) XL lawn cart, (3) furniture dollies, (1) kitchen push cart, (1) small Gorilla push cart (lives in North Jersey). No charge.
+- **Kits:** (4) standard strike kits (floral snips, trash bags, band-aids, ratchet straps, paper towels, moving blankets, etc.), one per crew call. (1) rigging essentials kit (cable, carabiners) $100, with (1) electric winch.
+- Needs more than we own (5 podiums, 5 hand trucks, 3 vans) → rent/buy the gap and add it to the quote; the draft flags it.
+- Other events on the calendar the same day → the draft flags it: confirm the vans, ladders and kits aren't already going out (Airtable doesn't track gear per event yet).
+
+## Ceiling, tent pole + overhead installs: reach note required
+Any ceiling, tent pole, hung, suspended or overhead install ALWAYS gets a reach note in the draft:
+- Ceiling or tent pole height (floor to attachment point) and the working height
+- Where the number came from (client, venue doc, past job, or assumed)
+- Which ladders reach it (reach must cover the working height)
+- Height not given → first question to the client, plus a red flag. Over 20 ft = extreme access (premium labor, Skyscraper, rigging-trained crew). Over 24 ft = beyond anything we own: lift rental, priced in.
 
 ## HQ (start and end of every timeline)
 - South Jersey jobs: 1404 Circle Dr, Forked River, NJ 08731
