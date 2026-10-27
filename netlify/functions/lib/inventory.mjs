@@ -13,18 +13,18 @@ export const VANS = {
 };
 // Seats in rentals / client trucks (driver included).
 const RENTAL_SEATS = { uhaul: 3, box_truck: 3, client_truck: 3 };
-const ROOF_RACK_LADDERS = 2; // assumed: how many ladders the VANessa rack carries (TO CONFIRM)
+const ROOF_RACK_LADDERS = 4; // VANessa's rack has carried about 4 at a time (Alyssa, 10/27)
 
-// lengthFt = length collapsed/folded for transport. ESTIMATES: Alyssa to confirm.
+// lengthFt = most compact length for transport = the low end of the ladder's size range (Alyssa, 10/27).
 export const LADDERS = {
   skyscraper: { label: 'Skyscraper 12-24 ft extension ladder', have: 1, reachFt: 24, lengthFt: 12, price: 150 },
-  podium: { label: 'Podium ladder (12-14 ft reach)', have: 4, reachFt: 14, lengthFt: 10, price: 50 },
+  podium: { label: 'Podium ladder (12-14 ft reach)', have: 4, reachFt: 14, lengthFt: 12, price: 50 },
   aframe_12: { label: '12 ft A-frame (15 ft reach)', have: 1, reachFt: 15, lengthFt: 12, price: 50 },
   lg_8_12: { label: 'Little Giant 8-12 ft (15 ft reach)', have: 1, reachFt: 15, lengthFt: 8, price: 50 },
-  lg_5_10: { label: 'Little Giant 5-10 ft (13-14 ft reach)', have: 1, reachFt: 14, lengthFt: 7, price: 50 },
-  lg_4_8: { label: 'Little Giant 4-8 ft (10-12 ft reach)', have: 1, reachFt: 12, lengthFt: 5, price: 50 },
+  lg_5_10: { label: 'Little Giant 5-10 ft (13-14 ft reach)', have: 1, reachFt: 14, lengthFt: 5, price: 50 },
+  lg_4_8: { label: 'Little Giant 4-8 ft (10-12 ft reach)', have: 1, reachFt: 12, lengthFt: 4, price: 50 },
   std_6: { label: '6 ft ladder (8-10 ft reach)', have: 2, reachFt: 10, lengthFt: 6, price: 50 },
-  step: { label: 'Step ladder (6-7 ft reach)', have: 2, reachFt: 7, lengthFt: 4, price: 50 },
+  step: { label: 'Step ladder (6-7 ft reach)', have: 2, reachFt: 7, lengthFt: 6, price: 50 },
 };
 
 export const GEAR = {
@@ -43,7 +43,7 @@ export const GEAR = {
 export function inventoryText() {
   return [
     'VEHICLES WE OWN (2): ' + Object.entries(VANS).map(([k, v]) => `${k} = ${v.label}, ${v.interiorFt} ft interior rear doors to dash`).join('; ') + `. Anything beyond these two vans needs a rental (U-Haul cargo van or box truck). Crew ride together from HQ: VANessa seats 2; MINIvan seats 2 up front when it carries a load (deliveries), or 4-6 people when it only transports crew and carries nothing (set crew_only); U-Haul/box truck cab ~3. VANessa's ladder roof rack carries long ladders (~${ROOF_RACK_LADDERS}), freeing the floor for the load.`,
-    'LADDERS (key: label, how many, reach, approx. length folded for transport): ' + Object.entries(LADDERS).map(([k, l]) => `${k}: ${l.label} x${l.have}, reach ${l.reachFt} ft, ~${l.lengthFt} ft long folded`).join('; ') + '.',
+    'LADDERS (key: label, how many, reach, most compact length for transport): ' + Object.entries(LADDERS).map(([k, l]) => `${k}: ${l.label} x${l.have}, reach ${l.reachFt} ft, ~${l.lengthFt} ft compact`).join('; ') + '.',
     'CARTS + KITS (key: label x how many): ' + Object.entries(GEAR).map(([k, g]) => `${k}: ${g.label} x${g.have}`).join('; ') + '.',
   ].join('\n');
 }
@@ -141,14 +141,14 @@ export function checkInventory(plan, { otherEvents = [], hqName = '' } = {}) {
     const longCount = sized.filter((l) => LADDERS[l.type].lengthFt >= 10).reduce((a, l) => a + l.count, 0);
     if (rack && longest > maxVan - 0.5) {
       pull.push('Long ladder(s) ride on VANessa\'s roof rack');
-      if (longCount > ROOF_RACK_LADDERS + 2) warnings.push(`${longCount} long ladders (10 ft+ folded): ~${ROOF_RACK_LADDERS} on VANessa's roof rack, the rest inside. Check they fit with the load, or add a U-Haul.`);
+      if (longCount > ROOF_RACK_LADDERS + 2) warnings.push(`${longCount} long ladders (10 ft+ compact): ~${ROOF_RACK_LADDERS} on VANessa's roof rack, the rest inside. Check they fit with the load, or add a U-Haul.`);
     } else if (vans.length && longest > maxVan) {
       const l = sized.find((x) => LADDERS[x.type].lengthFt === longest);
-      warnings.push(`${LADDERS[l.type].label} is ~${longest} ft folded and won't fit in ${vans.join(' + ')} (${maxVan} ft). Use VANessa (roof rack) or a box truck/U-Haul, and price it in.`);
+      warnings.push(`${LADDERS[l.type].label} is ~${longest} ft compact and won't fit in ${vans.join(' + ')} (${maxVan} ft). Use VANessa (roof rack) or a box truck/U-Haul, and price it in.`);
     } else if (vans.length && longest >= maxVan - 0.5) {
-      warnings.push(`Longest ladder (~${longest} ft folded) is a tight fit in a ${maxVan} ft van: confirm it rides with the load, or plan a truck.`);
+      warnings.push(`Longest ladder (~${longest} ft compact) is a tight fit in a ${maxVan} ft van: confirm it rides with the load, or plan a truck.`);
     }
-    if (!rack && longCount >= 3) warnings.push(`${longCount} long ladders (10 ft+ folded) riding in the vans take most of the floor. Check they fit with the client's load, carts and kits, or add a U-Haul.`);
+    if (!rack && longCount >= 3) warnings.push(`${longCount} long ladders (10 ft+ compact) riding in the vans take most of the floor. Check they fit with the client's load, carts and kits, or add a U-Haul.`);
   }
 
   // Seats: the crew rides together from HQ

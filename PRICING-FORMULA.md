@@ -74,18 +74,18 @@ Many first-time inquirers haven't budgeted for us yet; they often book on the 3r
 
 ## Vehicles, ladders + gear we own (build rentals into the quote)
 Every draft lists what the job pulls from our stock and flags anything we don't have, so the rental gets priced in up front.
-- **Vans (2 only):** VANessa, extended cargo van, 12 ft interior rear doors to dash, **2 seats only**, with a **ladder roof rack** (long ladders ride on top, ~2 TO CONFIRM). MINIvan, 10 ft interior rear doors to dash: **2 seats up front when it carries a load** (deliveries); **4–6 people** (back + front) only when the job doesn't need it to carry anything (crew transport only).
+- **Vans (2 only):** VANessa, extended cargo van, 12 ft interior rear doors to dash, **2 seats only**, with a **ladder roof rack** (long ladders ride on top, about 4 at a time). MINIvan, 10 ft interior rear doors to dash: **2 seats up front when it carries a load** (deliveries); **4–6 people** (back + front) only when the job doesn't need it to carry anything (crew transport only).
 - **Seats / riding together:** the crew rides from HQ together, so match vehicles to crew size: VANessa 2, MINIvan 2 when loaded or 4–6 when it only moves crew, U-Haul/box truck cab ~3. Staffing says who drives what (TRUCK DRIVER for trucks) and who rides where. Not enough seats → more in MINIvan, another vehicle, or mileage for a separate car (flagged). Anything beyond what these two hold, a third vehicle, or a ladder too long for the van = rental (U-Haul cargo van or box truck), priced in the quote.
-- **Ladders** (reach; approx. folded length for transport, TO CONFIRM):
-  - (1) Skyscraper 12–24 ft extension: 24 ft reach; ~12 ft folded → VANessa (roof rack) or a truck only. $150
-  - (4) Podium ladders, 12–14 ft reach; ~10 ft folded → tight in MINIvan. $50 each
-  - (1) 12 ft A-frame, 15 ft reach; ~12 ft folded → VANessa (roof rack) or a truck only. $50
-  - (1) Little Giant 8–12 ft, max 15 ft reach; ~8 ft folded. $50
-  - (1) Little Giant 5–10 ft, max 13–14 ft reach; ~7 ft folded. $50
-  - (1) Little Giant 4–8 ft, max 10–12 ft reach; ~5 ft folded. $50
-  - (2) Standard 6 ft ladders, max 8–10 ft reach. $50 each
-  - (2) Step ladders, 6–7 ft reach. $50 each
-  - 3+ long ladders (10 ft+ folded) take most of a van floor: use VANessa's roof rack, check the rest fit with the client's load, or add a U-Haul.
+- **Ladders** (reach; most compact length for transport = the low end of the ladder's size range, e.g. 12–24 ft → 12 ft):
+  - (1) Skyscraper 12–24 ft extension: 24 ft reach; 12 ft compact → VANessa (roof rack or inside) or a truck only. $150
+  - (4) Podium ladders, 12–14 ft reach; 12 ft compact → VANessa (roof rack or inside) or a truck, not MINIvan. $50 each
+  - (1) 12 ft A-frame, 15 ft reach; 12 ft compact → VANessa (roof rack or inside) or a truck only. $50
+  - (1) Little Giant 8–12 ft, max 15 ft reach; 8 ft compact. $50
+  - (1) Little Giant 5–10 ft, max 13–14 ft reach; 5 ft compact. $50
+  - (1) Little Giant 4–8 ft, max 10–12 ft reach; 4 ft compact. $50
+  - (2) Standard 6 ft ladders, max 8–10 ft reach; 6 ft compact. $50 each
+  - (2) Step ladders, 6–7 ft reach; 6 ft compact. $50 each
+  - 3+ long ladders (10 ft+ compact) take most of a van floor: use VANessa's roof rack, check the rest fit with the client's load, or add a U-Haul.
 - **Carts:** (4) hand trucks/carts, (3) folding wagons, (1) XL lawn cart, (3) furniture dollies, (1) kitchen push cart, (1) small Gorilla push cart (lives in North Jersey). No charge.
 - **Kits:** (4) standard strike kits (floral snips, trash bags, band-aids, ratchet straps, paper towels, moving blankets, etc.), one per crew call. (1) rigging essentials kit (cable, carabiners) $100, with (1) electric winch.
 - Needs more than we own (5 podiums, 5 hand trucks, 3 vans) → rent/buy the gap and add it to the quote; the draft flags it.
