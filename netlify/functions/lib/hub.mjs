@@ -7,7 +7,7 @@
 const ready = () => !!(process.env.HUB_URL && process.env.HUB_INTAKE_TOKEN);
 
 async function post(path, body) {
-  if (!ready()) return null;
+  if (!ready()) throw new Error('not sent: HUB_URL and/or HUB_INTAKE_TOKEN missing in this site\'s Netlify environment variables (add them, then redeploy)');
   const r = await fetch(`${process.env.HUB_URL.replace(/\/$/, '')}${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${process.env.HUB_INTAKE_TOKEN}` },
