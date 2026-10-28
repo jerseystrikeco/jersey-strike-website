@@ -25,6 +25,7 @@ import { renderQuoteEmail, renderQuoteText, renderFlagsText, quoteSubject } from
 import { triggerSecret } from './lib/trigger.mjs';
 import { subjectFor, inquiryMessageId } from './submission-created.mjs';
 import { proposalPdf, proposalFilename } from './lib/proposal-pdf.mjs';
+import { sendProposalToHub } from './lib/hub.mjs';
 
 // Airtable columns for the draft. Add these to the Inquiries table (see LAUNCH-GUIDE.md).
 const DEFAULT_TABLE = 'tblvthafdL2XhCDZt'; // EVENT INQUIRIES + LEADS (same as submission-created)
@@ -69,7 +70,7 @@ export default async (req) => {
     console.error(`[quote] stopped: secret mismatch (got ${got.slice(0, 6) || 'nothing'}…, expected ${secret.slice(0, 6)}…)`);
     return new Response('Forbidden', { status: 403 });
   }
-  const { inquiry, recordId } = body || {};
+  const { inquiry, recordId, hubLeadId } = body || {};
   if (!inquiry) {
     console.error('[quote] stopped: no inquiry in body');
     return new Response('Bad request', { status: 400 });
@@ -94,9 +95,10 @@ export default async (req) => {
 
   const args = { inquiry, ...result, recordUrl };
   // Client-ready proposal PDF (Trellis layout) for the admin team to review/forward.
-  let attachments;
+  let attachments; let pdfBytes = null;
   try {
     const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced });
+    pdfBytes = pdf;
     attachments = [{ filename: proposalFilename(inquiry), content: pdf.toString('base64') }];
   } catch (e) {
     console.error('[quote] proposal PDF failed:', e.message);
@@ -106,9 +108,11 @@ export default async (req) => {
     sendEmail({ subject: `Re: ${subjectFor(inquiry)}`, html: renderQuoteEmail(args), text: `${quoteSubject(inquiry, result.priced)}\n\n` + renderQuoteText(args) + '\n\n' + renderFlagsText(args),
       headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments }),
     recordId ? updateAirtable(recordId, args) : Promise.reject(new Error('no Airtable record id (Phase 1 save failed)')),
+    // The same draft PDF + total on the lead in the hub (the total is owner-only there).
+    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId }) : Promise.reject(new Error('no proposal PDF')),
   ]);
   steps.forEach((r, i) => {
-    const step = i === 0 ? 'email' : 'airtable';
+    const step = ['email', 'airtable', 'hub'][i];
     if (r.status === 'rejected') console.error(`[quote] ${step} failed:`, r.reason?.message || r.reason);
     else console.log(`[quote] ${step} ok`);
   });

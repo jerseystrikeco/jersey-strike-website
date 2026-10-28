@@ -67,10 +67,12 @@ export const GRANDFATHERED = [
   {
     match: /\bwile\b/i,
     name: 'Wile Events',
-    laborPerHour: { install: 50, design: 50, flip: 50 }, // strike/returns stay at $65. Wile is the ONLY client still at $50 (being phased out).
+    laborPerHour: { install: 50, design: 50, flip: 50 }, // strike/returns stay at $65.
+    // Set-up rate steps up each year toward $65, by EVENT DATE (Alyssa, 10/28/26). Add next year's rate here each November.
+    laborByYear: { 2026: 50, 2027: 55 },
     adminFeePct: 0.05,
     marginByDollars: true, // judged on gross-profit dollars: high average project value (often $5k+ net)
-    note: 'Wile Events is grandfathered: $50/hr install, design and flip labor (strike stays $65/hr) and a 5% admin fee.',
+    note: 'Wile Events is grandfathered: install, design and flip labor at $50/hr for 2026 dates and $55/hr for 2027 dates (strike stays $65/hr), and a 5% admin fee.',
   },
   {
     match: /petal\s*to\s*peddle|\baptp\b/i,
@@ -170,7 +172,16 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     if (Math.round(num(s.team_size)) === 1) warnings.push(`"${s.label}" is a solo shift: only OK with a very strong team member, a very easy job, daytime and an easy drive.`);
     if (hrs > 16) warnings.push(`"${s.label}" is ${hrs} hrs portal to portal. Check team safety / hotel.`);
     const kind = s.kind || 'install';
-    const grand = g?.laborPerHour?.[kind];
+    let grand = g?.laborPerHour?.[kind];
+    if (grand != null && g.laborByYear) {
+      let yr = null;
+      const dm = String(s.date || '').match(/\d{1,2}\/\d{1,2}\/(\d{2,4})/) || String(plan.event_date || inquiry.event_date || '').match(/^(\d{4})-/);
+      if (dm) yr = Number(dm[1].length === 2 ? `20${dm[1]}` : dm[1]);
+      const years = Object.keys(g.laborByYear).map(Number).sort();
+      if (!yr) { yr = new Date().getFullYear(); warnings.push(`${g.name}: no event year on "${s.label}"; used ${yr} rates.`); }
+      const use = years.filter((y) => y <= yr).pop() ?? years[0];
+      grand = g.laborByYear[use];
+    }
     const triggers = [...new Set((s.premium_reasons || []).filter(Boolean))];
     let rate = grand ?? R.laborPerHour;
     const major = triggers.includes('major_holiday');

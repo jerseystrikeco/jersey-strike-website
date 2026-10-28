@@ -17,6 +17,7 @@
 //   AIRTABLE_TABLE     optional; defaults to your EVENT INQUIRIES + LEADS table
 
 import { triggerSecret } from './lib/trigger.mjs';
+import { sendInquiryToHub } from './lib/hub.mjs';
 
 // Netlify sets URL to the live site address (the netlify.app address now, jerseystrike.com once the domain is connected).
 const SITE = (process.env.URL || 'https://jerseystrike.com').replace(/\/$/, '');
@@ -201,15 +202,15 @@ export default async (req) => {
   if (!payload || !['inquiry', 'team-quote', 'production'].includes(payload.form_name)) return new Response('Ignored');
 
   const inquiry = normalize(payload);
-  const results = await Promise.allSettled([sendEmail(inquiry), saveToAirtable(inquiry)]);
+  const results = await Promise.allSettled([sendEmail(inquiry), saveToAirtable(inquiry), sendInquiryToHub(inquiry, scopeText(inquiry), subjectFor(inquiry))]);
   results.forEach((r, i) => {
-    const step = i === 0 ? 'email' : 'airtable';
+    const step = ['email', 'airtable', 'hub'][i];
     if (r.status === 'rejected') console.error(`[inquiry] ${step} failed:`, r.reason?.message || r.reason);
     else console.log(`[inquiry] ${step} ok`);
   });
   // Phase 2: start the AI-drafted preliminary quote (admin review only, never sent to the client).
   try {
-    await startQuoteDraft(inquiry, results[1].status === 'fulfilled' ? results[1].value : null);
+    await startQuoteDraft(inquiry, results[1].status === 'fulfilled' ? results[1].value : null, results[2].status === 'fulfilled' ? results[2].value?.leadId : null);
   } catch (e) {
     console.error('[inquiry] quote draft not started:', e.message);
   }
@@ -218,7 +219,7 @@ export default async (req) => {
 
 // Hands the inquiry to draft-quote-background.mjs. Skipped when Phase 2 isn't set up
 // (no ANTHROPIC_API_KEY / QUOTE_TRIGGER_SECRET). The quote gets the full formatted scope.
-async function startQuoteDraft(q, recordId) {
+async function startQuoteDraft(q, recordId, hubLeadId) {
   const secret = triggerSecret();
   if (!secret) return;
   const inquiry = { ...q, scope: scopeText(q), clientNotes: q.scope };
@@ -226,7 +227,7 @@ async function startQuoteDraft(q, recordId) {
   const r = await fetch(`${SITE}/.netlify/functions/draft-quote-background`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-quote-secret': secret },
-    body: JSON.stringify({ inquiry, recordId, secret }),
+    body: JSON.stringify({ inquiry, recordId, hubLeadId, secret }),
   });
   if (!r.ok && r.status !== 202) throw new Error(`draft-quote-background ${r.status}`);
   console.log(`[inquiry] quote draft started (${r.status}, ${SITE})`);

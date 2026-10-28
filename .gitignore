@@ -1,0 +1,18 @@
+node_modules/
+test/runs/
+.DS_Store
+
+# Private or working files: never upload to GitHub
+proposals/
+Claude outputs/
+_source-images/
+*.zip
+netlify.toml.new
+.env
+.env.*
+.netlify/
+
+# Client-specific quote scripts + previews stay on the Mac only
+test/make-*.mjs
+test/_*.mjs
+test/*.pdf

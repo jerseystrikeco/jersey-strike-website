@@ -72,6 +72,7 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   const W = doc.page.width, L = 50, R = W - 50, CW = R - L, BOTTOM = doc.page.height - 75;
   const F = 'Helvetica', FB = 'Helvetica-Bold', FI = 'Helvetica-Oblique', FBI = 'Helvetica-BoldOblique';
   const IT = L + 30, ITW = CW - 30;
+  const GREY = '#9a9a9a';
 
   const header = () => {
     const lw = 240, lh = lw * (126 / 427);
@@ -112,9 +113,9 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   doc.font(FB).fontSize(17).text(title, L, doc.y, { width: CW });
   doc.font(F).fontSize(12);
   doc.text(`Date: ${longDate(q.eventDate)}`, L, doc.y).text(`Venue: ${q.venue || 'TBD'}`, L, doc.y); doc.moveDown(1);
-  doc.text(`Florist: ${q.business || ''}`, L, doc.y);
-  if (q.studio) doc.text(`Florist Address: ${q.studio}`, L, doc.y);
-  doc.text(`Florist Contact: ${[q.contact, q.phone].filter(Boolean).join(' ')}`, L, doc.y);
+  doc.text(`${q.clientLabel || 'Florist'}: ${q.business || ''}`, L, doc.y);
+  if (q.studio) doc.text(`${q.clientLabel || 'Florist'} Address: ${q.studio}`, L, doc.y);
+  doc.text(`${q.clientLabel || 'Florist'} Contact: ${[q.contact, q.phone].filter(Boolean).join(' ')}`, L, doc.y);
 
   // 5. Timeline + task list
   doc.addPage(); doc.x = L; doc.y = 50;
@@ -128,6 +129,15 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
     if (line?.hours) doc.text(`${line.hours}hrs`, IT, doc.y);
     doc.moveDown(0.8);
   }
+  // Optional shifts (e.g. an optional strike): shown faded, not in the total.
+  for (const s of plan.optional_shifts || []) {
+    ensure(40);
+    doc.fillColor(GREY).font(FI).fontSize(11.5).text(`OPTIONAL (not included in total): ${[s.label, s.date].filter(Boolean).join(' – ')}`, IT, doc.y, { width: ITW });
+    doc.text(`JS Team of ${s.team_size}${s.roles ? ` (${s.roles})` : ''}`, IT, doc.y, { width: ITW });
+    for (const st of s.steps || []) { ensure(16); doc.text(`${st.time} - ${st.label}`, IT, doc.y, { width: ITW }); }
+    if (s.hours) doc.text(`${s.hours}hrs`, IT, doc.y);
+    doc.fillColor('#111'); doc.moveDown(0.8);
+  }
   if (plan.task_list?.length) {
     ensure(40);
     doc.font(FBI).text('TASK LIST', IT, doc.y);
@@ -136,8 +146,8 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   }
   doc.moveDown(1.2); ensure(90); softRule(CW * 0.68, '#e2dcc8'); doc.moveDown(1.6);
 
-  // Quote breakdown
-  ensure(80);
+  // Quote breakdown (keep the heading with its first line item)
+  ensure(160);
   doc.font(FB).fontSize(17).text('QUOTE BREAKDOWN', L, doc.y); doc.moveDown(1.2);
   doc.fontSize(11.5);
   for (const l of priced.lines) {
@@ -177,6 +187,34 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   row(`${priced.production ? 'Production Planning Fee' : 'Admin Fee'}   ${Math.round(priced.adminPct * 100)}%`, money(priced.admin));
   if (priced.discount) row(`${priced.discount.label}   -${Math.round(priced.discount.pct * 100)}%`, money(priced.discount.amount));
   row('Total', money(priced.total), { bold: true });
+  // Exclusions: what this scope does NOT include (shown right under the total).
+  if (priced.exclusions?.length) {
+    doc.moveDown(0.9); ensure(40);
+    doc.fillColor('#111').font(FB).fontSize(11).text('NOT INCLUDED IN THIS SCOPE OF WORK:', IT, doc.y, { width: ITW });
+    doc.font(F).fontSize(10.5);
+    for (const e of priced.exclusions) { ensure(16); doc.text(`• ${e}`, IT, doc.y, { width: ITW }); }
+  }
+  // Optional add-ons: faded, listed for consideration, NOT included in the total above.
+  for (const o of priced.optional || []) {
+    doc.moveDown(1.2); ensure(60 + (o.lines || []).length * 50);
+    doc.fillColor(GREY).font(FBI).fontSize(11.5).text(`OPTIONAL FOR CONSIDERATION: ${o.title}`, IT, doc.y, { width: ITW });
+    doc.font(FI).fontSize(10).text('Not included in the total above. Add-on price if selected.', IT, doc.y, { width: ITW }); doc.moveDown(0.7);
+    doc.fontSize(11.5);
+    for (const l of o.lines || []) {
+      const desc = itemLines(l);
+      ensure(30 + desc.length * 15);
+      const y0 = doc.y;
+      doc.fillColor(GREY).font(F).text('1', IT, y0);
+      doc.font(FB).text(`${itemTitle(l)}  |  ${money(l.amount)}`, IT + 18, y0, { width: ITW - 18 });
+      doc.font(F); desc.forEach((d) => doc.text(d, IT + 18, doc.y, { width: ITW - 18 }));
+      doc.moveDown(0.6);
+    }
+    const orow = (label, value, bold) => { ensure(18); const y = doc.y; doc.fillColor(GREY).font(bold ? FB : F).fontSize(11.5).text(label, L + CW * 0.45, y, { width: CW * 0.4 - 8, align: 'right' }); const yl = doc.y; doc.text(value, L + CW * 0.85, y, { width: CW * 0.15, align: 'right' }); doc.y = yl; doc.moveDown(0.25); };
+    if (o.admin) orow(`${priced.production ? 'Production Planning Fee' : 'Admin Fee'}   ${Math.round(priced.adminPct * 100)}%`, money(o.admin));
+    orow(`Optional ${o.title} Total`, money(o.total), true);
+    if (o.note) { doc.font(FI).fontSize(10).fillColor(GREY).text(o.note, IT, doc.y, { width: ITW }); }
+    doc.fillColor('#111');
+  }
   doc.moveDown(1.2); ensure(50);
   doc.font(F).fontSize(10).text('*This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.', IT, doc.y, { width: ITW, lineGap: 1.5 });
 

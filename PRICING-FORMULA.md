@@ -6,7 +6,7 @@ Price = total timeline hours × team size × $65/hr, + vehicles, + infrastructur
 Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, INCLUDING the 8% admin fee. Drafts FLAG jobs under the minimum but don't bump them; the admin team decides (many past small jobs went out under).
 
 ## Line items
-- Base fee: $300 per day on site at the venue (establishes the floor). Install day + strike day = $600.
+- Base fee: $300 per service day on site at the venue (establishes the floor). Install and strike on different days = $600. An install early in the day and the strike that same night (even if the strike starts at or runs past midnight) are ONE service day = $300 (Alyssa, 10/27/26).
   - Exceptions: no extra base fee when a split or next-day delivery is for our benefit (our schedule, team safety or convenience), e.g. a late-night strike where we deliver back to the studio the next morning. The draft flags these for admin review and doesn't add a base fee.
 - Labor: $65/hr per person for ALL labor types (design planning, set up/install, strike, flips, returns); hours = portal-to-portal timeline × team size
 - Fuel: vans $1/mile per van (two vans = double the miles); box trucks (incl. U-Haul) $1/mile per round trip, capped at $200 per round trip (short local trips don't burn a full tank; install trip and strike trip each count as one). Trellis note: by mile or flat $100–$200 per event depending on scope; our fuel cost ≈ $0.70/mile
@@ -66,7 +66,7 @@ Quote what the job actually takes (team + hours from the sizing method), not wha
 Many first-time inquirers haven't budgeted for us yet; they often book on the 3rd–5th inquiry or when they're in a pinch. Drafts check the client's history, keep the real quote honest, and suggest a leaner option to offer.
 
 ## Grandfathered clients
-- Wile Events: $50/hr install/design labor and 5% admin fee (old rates; being brought up to market over time). Wile is the ONLY client still at $50; everyone else is $65. Their jobs typically run $10k+ from volume, so still profitable.
+- Wile Events (VIP): install/design labor by EVENT DATE: 2026 dates $50/hr, 2027 dates $55/hr (Alyssa, 10/28/26); 5% admin fee (grandfathered). Alyssa steps this up each year toward the $65/hr market rate; the new year's rate is set in the November rate review and updated here (Alyssa, 10/28/26). Strikes and everything else at standard rates. Wile is the ONLY client below $65; everyone else is $65. Their jobs typically run $10k+ from volume, so still profitable.
 - A Petal to Peddle (Christa Quigley, Jersey City): no strike or full-service minimum; charged actual job + 8% admin. Her jobs are small.
 - Floralaine (Taylor Diglio, Glen Ridge): repeat, very organized, pays full quotes (would have paid ~$2,800 for Cooper Hewitt). Quote straight.
 - A Lily Among Thorns (Isabel Garcia, Bergenfield): 25% family discount off the total, taken after the 8% admin fee. Draft checks the business name against this list and notes when an old rate applies.
