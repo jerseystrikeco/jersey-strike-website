@@ -31,3 +31,5 @@
   for = "/team-quote/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
+    # Only the team hub may show the worksheet inside its own page.
+    Content-Security-Policy = "frame-ancestors 'self' https://hub.jerseystrike.com"
