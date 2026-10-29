@@ -5,6 +5,7 @@
 // To change a rate, change it here AND in PRICING-FORMULA.md (Claude reads that file).
 
 import { ladderLines, checkInventory, checkReach } from './inventory.mjs';
+import { localEvents } from './local-events.mjs';
 
 export const RATES = {
   laborPerHour: 65, // all labor types
@@ -336,10 +337,14 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
 
   // Inventory, vehicles + reach (code checks, so a short ladder or a third van never slips through)
   const inv = checkInventory(plan, { otherEvents: ctx.otherEvents || [], hqName: ctx.hqName || '' });
-  warnings.unshift(...checkReach(plan, inquiry), ...inv.warnings);
+  // Big local events on the date (parades, marathons, tree lightings, NYE...): road closures + traffic around the venue
+  const events = localEvents([inquiry.eventDate || inquiry.event_date || plan.event_date, ...(plan.shifts || []).map((x) => x.date)],
+    [inquiry.venue, inquiry.studio, ...(plan.shifts || []).flatMap((x) => (x.steps || []).map((st) => st.label))]);
+  const eventFlags = events.map((e) => `LOCAL EVENT ${e.when === 'same day' ? 'ON THE DATE' : 'THE DAY BEFORE/AFTER'} (${e.date}): ${e.name}. Add ~${e.buffer} min to every drive into/out of the area, plan the route around the closures, and confirm the venue's loading/access plan.`);
+  warnings.unshift(...eventFlags, ...checkReach(plan, inquiry), ...inv.warnings);
 
   return {
-    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null,
+    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null, localEvents: events,
     grandfathered: g ? g.note : '',
   };
 }

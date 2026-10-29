@@ -98,6 +98,12 @@ Any ceiling, tent pole, hung, suspended or overhead install ALWAYS gets a reach 
 - Which ladders reach it (reach must cover the working height)
 - Height not given → first question to the client, plus a red flag. Over 20 ft = extreme access (premium labor, Skyscraper, rigging-trained crew). Over 24 ft = beyond anything we own: lift rental, priced in.
 
+## Local events + traffic (parades, marathons, tree lightings, games)
+Every draft checks the date and the venue's area for big events that close roads or jam traffic, and plans around them.
+- **Our calendar (in code, dates worked out for each year):** NYC Marathon (1st Sunday of Nov), Macy's Thanksgiving Parade (+ balloon inflation the night before), Rockefeller tree lighting (usually the Wednesday after Thanksgiving), Midtown holiday season (Thanksgiving to early Jan), NYE Times Square, NYC St. Patrick's Parade, NYC Pride March, UN General Assembly week (East Midtown, late Sept), US Open (Flushing), Philadelphia Marathon weekend (the weekend before Thanksgiving), Philly Thanksgiving Parade, Mummers Parade, Broad Street Run, Penn Relays, Philly July 4th, Army-Navy Game, MetLife/Meadowlands events (check the stadium calendar), Jersey Shore summer weekends (Fri-Sun, Memorial to Labor Day).
+- **Web research:** Claude also searches the web for one-off events near the venue on the date (concerts, games, festivals, protests, motorcades, bridge/tunnel or construction closures).
+- **What it does to the quote:** every hit is a red flag. Claude adds the event buffer to every drive into or out of the area (on top of the normal buffers: about 90 min for marathons, parades and the tree lighting, 2 hrs for NYE, 30-60 min for the rest), arrives earlier, plans the approach around the closures (which bridge/tunnel/avenue, where the van can load), and asks the client about the venue's access plan (security perimeter, loading window, freight elevator, COI).
+
 ## HQ (start and end of every timeline)
 - South Jersey jobs: 1404 Circle Dr, Forked River, NJ 08731
 - North Jersey + NY events: Montclair, NJ (no street address; route from town center)

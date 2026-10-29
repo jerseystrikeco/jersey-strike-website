@@ -18,7 +18,7 @@
 //   + the Phase 1 variables (RESEND_API_KEY, INQUIRY_FROM, AIRTABLE_*)
 
 import { planRoutes } from './lib/routes.mjs';
-import { planQuote } from './lib/claude.mjs';
+import { planQuote, researchLocalEvents } from './lib/claude.mjs';
 import { staffCandidates } from './lib/staffing.mjs';
 import { priceQuote } from './lib/pricing.mjs';
 import { renderQuoteEmail, renderQuoteText, renderFlagsText, quoteSubject } from './lib/quote-render.mjs';
@@ -43,9 +43,13 @@ const truckish = (inq) =>
 
 export async function draftQuote(inquiry) {
   const routes = await planRoutes(inquiry, { truck: truckish(inquiry) }).catch((e) => ({ available: false, notes: [`Routing failed: ${e.message}`] }));
-  const staff = await staffCandidates(inquiry, { hq: routes.hq, venue: inquiry.venue }).catch((e) => ({ available: false, notes: [`Staffing not checked: ${e.message}`] }));
+  const [staff, research] = await Promise.all([
+    staffCandidates(inquiry, { hq: routes.hq, venue: inquiry.venue }).catch((e) => ({ available: false, notes: [`Staffing not checked: ${e.message}`] })),
+    researchLocalEvents(inquiry),
+  ]);
   if (staff.notes?.length) console.log('[quote] staffing:', staff.notes.join(' | '));
-  const { plan, docNotes, model } = await planQuote(inquiry, routes, staff);
+  if (research.error) console.log('[quote] local event research:', research.error);
+  const { plan, docNotes, model } = await planQuote(inquiry, routes, staff, research);
   const priced = priceQuote(plan, inquiry, { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '' });
   return { routes, plan, docNotes, priced, model, staff };
 }

@@ -4,6 +4,7 @@ import { toMinutes } from './pricing.mjs';
 // pricing math; pricing.mjs does that from this plan.
 import { FORMULA, PAST_JOBS } from './knowledge.generated.mjs';
 import { inventoryText } from './inventory.mjs';
+import { localEventsText } from './local-events.mjs';
 
 const MODEL = () => process.env.ANTHROPIC_MODEL || 'claude-opus-4-5';
 const MAX_INLINE_BYTES = 20 * 1024 * 1024;
@@ -179,6 +180,7 @@ How to plan:
 - Team size: follow past-jobs/00-job-sizing.md (zones → work units → person-hours → fit the window → sanity-check vs similar jobs).
 - Solo (team of 1) only when ALL are true: very easy job, daytime, easy/short drive, no ladders/rigging; say it needs a very strong team member. Night strikes and anything with ladders get at least 2.
 - Premium labor triggers per crew call (premium_reasons): major_holiday = time and a half (Thanksgiving / Black Friday weekend Wed-Sun, the whole Dec 23 - Jan 2 holiday season, July 4; e.g. $97.50/hr), holiday = +$10 (Memorial/Labor Day weekends, Valentine's/Mother's Day weeks for floral work), nyc_difficult (Manhattan/Brooklyn/Queens venues with no dock, street parking/permits, security check-in, freight-elevator or union rules, long carries), short_notice (inquiry < 7 days before the event), extreme_access (ladders over 20 ft, scissor lift, heavy hung structures/grids over a dance floor), difficult_scope (the team will clearly work beyond a reasonable expectation: very heavy/awkward pieces, huge piece counts for the window, many long carries or stairs, multiple flips, punishing conditions). Only for genuinely harder calls; explain each in reasoning. Holidays come ONLY from the DATE CHECK line in the inquiry; never flag a holiday, holiday weekend or holiday traffic it doesn't name. Don't add generic red flags (weather, \"check for conflicts\", \"December night\"); red flags are specific risks to this job.
+- Local events + traffic: the LOCAL EVENTS section lists parades, marathons, tree lightings, NYE, games, concerts, festivals and road closures near the venue or route on the date (from our calendar and from web research). For EACH one that affects the job: add its buffer to every drive leg into or out of the affected area in the timeline (on top of the normal drive buffers and the 1 hr minimum), arrive earlier, and plan the approach around the closures (name the bridge/tunnel/avenue to use or avoid, and where the van can stop to load). Put the closures, parking and loading limits in logistics_notes, add a red flag, list it in assumptions (with what it changes in $), and ask the client about the venue's access plan (security perimeter, loading window, freight elevator, COI). Use nyc_difficult or difficult_scope only when it really makes the crew's work harder. Never invent an event that isn't in that section; if it says nothing was found, don't add event traffic.
 - Fabrication: if the job needs a custom build, estimate it in "fabrication" (materials cost + shop hours) using past fab jobs as comparables (e.g. metal chuppah $2,800 = $2,200 materials + $600 labor; wooden 8x8 chuppah ~$4,600; standard custom chuppah builds $1,823–3,279; modular arch ~$3,600–3,900; plinth build ~$2,355; 2x6 ft frame $450; 9x4 ft grid $510; chandelier rings $100 each; custom tabletops ~$415 each). Be explicit about confidence, flags and questions for Larry. If Jersey Strike already owns something that fits (wooden chuppah rental $950, arch rental, white plinths $75 each, pole urn + plinth, stage backdrop ~$3,600), suggest renting it instead via additional_rentals.
 - Viability: Jersey Strike aims for a 50% gross margin on every job. Team pay is $30/hr ($45 on major holidays, overtime after 40 hrs/week) and includes each person's drive from home (often ~1 hr each way beyond HQ). The engine calculates margin; in reasoning, call out anything that would squeeze it (long drives, idle waits between install and strike, extra crew for safety, many small multi-day calls, grandfathered rates) and suggest how to restructure (fewer trips, combine calls, next-day strike, U-Haul vs van).
 - Client history: check the past jobs for this business. Many first-time inquirers haven't budgeted for Jersey Strike yet and often book on their 3rd–5th inquiry or when in a pinch. For first-timers and past declines, keep the quote honest (don't cut safety/team below what the job needs), fill lean_option with a leaner alternative, and note it in client_history.
@@ -222,7 +224,35 @@ async function fileToBlock(f) {
   }
 }
 
-export async function planQuote(inquiry, routes, staff = null) {
+// Web research (Anthropic web search tool) for one-off events near the venue on the date: concerts, games, parades,
+// festivals, protests, marathons, construction or bridge/tunnel closures. Returns short notes, or '' if search isn't
+// available (turn web search on in the Anthropic Console: Settings > Privacy/Tools) or nothing turned up.
+export async function researchLocalEvents(inquiry) {
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key || process.env.LOCAL_EVENT_RESEARCH === 'off' || !inquiry.venue || !inquiry.eventDate) return { notes: '', error: null };
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_RESEARCH_MODEL || MODEL(),
+        max_tokens: 1500,
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+        messages: [{ role: 'user', content: `An event crew (vans, sometimes a box truck) drives to ${inquiry.venue}${inquiry.studio ? ` (pickup/drop-off at ${inquiry.studio})` : ''} on ${inquiry.eventDate}, usually from Montclair NJ or Forked River NJ.
+Search the web for anything on that date (and the evening before/after) that will snarl traffic, close roads or lock down blocks near the venue or on the likely route: parades, marathons/races, tree lightings, festivals, concerts, sports games, protests, presidential/UN motorcades, bridge or tunnel closures, major construction.
+Answer in at most 6 short bullet lines: "- <event>, <date + hours>, <where / which roads are closed>, <source site>". Only events you actually found for this date. If you find nothing, answer exactly: NONE FOUND.` }],
+      }),
+    });
+    if (!r.ok) return { notes: '', error: `research ${r.status}: ${(await r.text()).slice(0, 160)}` };
+    const msg = await r.json();
+    const text = (msg.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('').trim();
+    return { notes: /NONE FOUND/i.test(text) && text.length < 40 ? 'Nothing found online for this date and area.' : text.slice(0, 2500), error: null };
+  } catch (e) {
+    return { notes: '', error: `research failed: ${e.message}` };
+  }
+}
+
+export async function planQuote(inquiry, routes, staff = null, research = null) {
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) throw new Error('ANTHROPIC_API_KEY is not set');
 
@@ -242,6 +272,11 @@ ${JSON.stringify({
 
 DATE CHECK
 ${dateCheck(inquiry.eventDate)}
+
+LOCAL EVENTS + TRAFFIC (near the venue / route on the date)
+From our calendar:
+${localEventsText([inquiry.eventDate], [inquiry.venue, inquiry.studio])}
+From web research: ${research?.notes || (research?.error ? `not available (${research.error})` : 'not available')}
 
 ${staff?.available ? `STAFF SHORTLIST (from Airtable; ranked, free that day)\n${JSON.stringify({ calendar: staff.calendar, shortlist: staff.shortlist, booked_that_day: staff.booked_that_day }, null, 1)}\n\n` : `STAFF SHORTLIST: not available${staff?.notes?.length ? ` (${staff.notes.join('; ')})` : ''}\n\n`}DRIVE TIMES (${routes.available ? 'from Google Maps' : 'not available'})
 ${JSON.stringify(routes, null, 2)}
