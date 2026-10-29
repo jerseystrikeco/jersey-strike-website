@@ -23,6 +23,9 @@ export async function sendInquiryToHub(q, details, subject) {
   return post('/api/intake', { inquiry: { ...inquiry, subject, raw: { full_event_budget: raw?.full_event_budget || '', production_budget: raw?.production_budget || '' } }, details });
 }
 
-export async function sendProposalToHub(inquiry, { pdf, filename, total, leadId }) {
-  return post('/api/proposal', { leadId, inquiryId: inquiry.id, total, filename, pdfBase64: Buffer.isBuffer(pdf) ? pdf.toString('base64') : pdf, by: 'Claude (website quote)' });
+// plan = Claude's structured quote plan, so the hub's quote editor can open the draft and tweak it.
+export async function sendProposalToHub(inquiry, { pdf, filename, total, leadId, plan }) {
+  const q = inquiry || {};
+  const draft = plan ? { plan, inquiry: { business: q.business || '', contact: q.contact || '', phone: q.phone || '', email: q.email || '', eventDate: q.eventDate || '', venue: q.venue || '', studio: q.studio || '', production: !!q.production } } : undefined;
+  return post('/api/proposal', { leadId, inquiryId: q.id, total, filename, pdfBase64: Buffer.isBuffer(pdf) ? pdf.toString('base64') : pdf, by: 'Claude (website quote)', ...(draft ? { draft } : {}) });
 }

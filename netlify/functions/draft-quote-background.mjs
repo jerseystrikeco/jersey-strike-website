@@ -109,7 +109,7 @@ export default async (req) => {
       headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments }),
     recordId ? updateAirtable(recordId, args) : Promise.reject(new Error('no Airtable record id (Phase 1 save failed)')),
     // The same draft PDF + total on the lead in the hub (the total is owner-only there).
-    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId }) : Promise.reject(new Error('no proposal PDF')),
+    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId, plan: result.plan }) : Promise.reject(new Error('no proposal PDF')),
   ]);
   steps.forEach((r, i) => {
     const step = ['email', 'airtable', 'hub'][i];

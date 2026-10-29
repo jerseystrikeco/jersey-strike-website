@@ -150,8 +150,14 @@ export function priceUhaul({ days, miles, quotedCost }) {
 }
 
 // plan: Claude's structured plan (see claude.mjs schema). inquiry: normalized form data.
+// ctx.rates: optional overrides (e.g. the hub's dated rate card): { laborPerHour, baseFeePerVenueDay, adminFeePct, vanPerMile, cost: { teamPay, ... } }.
+export function mergeRates(over = {}) {
+  const o = over || {};
+  return { ...RATES, ...o, cost: { ...RATES.cost, ...(o.cost || {}) }, uhaul: { ...RATES.uhaul, ...(o.uhaul || {}) }, fab: { ...RATES.fab, ...(o.fab || {}) }, production: { ...RATES.production, ...(o.production || {}) }, minimums: { ...RATES.minimums, ...(o.minimums || {}) } };
+}
+
 export function priceQuote(plan, inquiry = {}, ctx = {}) {
-  const R = RATES;
+  const R = mergeRates(ctx.rates);
   const g = clientRules(inquiry.business);
   const production = !!inquiry.production || plan.job_type === 'full_production';
   const lines = [];
@@ -163,7 +169,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     lines.push({ section, label, math, amount: round2(amount), ...extra });
 
   // Labor: each shift is portal to portal
-  for (const s of plan.shifts || []) {
+  for (const [si, s] of (plan.shifts || []).entries()) {
     let hrs = shiftHours(s.depart_hq, s.back_hq);
     if (hrs == null) {
       hrs = num(s.hours);
@@ -193,7 +199,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     if (triggers.length && grand != null) warnings.push(`"${s.label}" has premium triggers (${triggers.join(', ')}) but ${g.name} is on grandfathered rates; no premium applied.`);
     const team = Math.max(0, Math.round(num(s.team_size)));
     const payRate = major && grand == null ? R.cost.holidayPay : R.cost.teamPay;
-    costs.push({ what: `${s.label}: ${team} × (${hrs} + ${R.cost.homeDriveHrs} home drive) hrs × ${fmt(payRate)}`, amount: team * (hrs + R.cost.homeDriveHrs) * payRate });
+    costs.push({ what: `${s.label}: ${team} × (${hrs} + ${R.cost.homeDriveHrs} home drive) hrs × ${fmt(payRate)}`, amount: team * (hrs + R.cost.homeDriveHrs) * payRate, kind: 'labor', shift: si, team, hrs, payRate, holiday: major && grand == null });
     personHrs += team * hrs;
     add('Labor', [s.label, s.date].filter(Boolean).join(' | '),
       `Team of ${team} × ${hrs} hrs × ${fmt(rate)}/hr (${s.depart_hq} → ${s.back_hq} portal to portal)${triggers.length && grand == null ? `; premium: ${triggers.join(' + ').replace(/_/g, ' ')}` : ''}`,
