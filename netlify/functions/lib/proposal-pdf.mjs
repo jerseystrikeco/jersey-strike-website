@@ -41,9 +41,16 @@ const BEST = [
   "TAKE PHOTOS + VIDEOS OF YOUR EVENT PRODUCTION SET UP (AND LOADING DETAILS) SO YOU CAN SEND THEM OVER TO OUR BREAKDOWN TEAM. THIS SHOWS THEM HOW MECHANICS ARE PUT TOGETHER AND ALLOWS OUR TEAM TO ARRIVE PREPARED (TOOLING, HAND-TRUCKS + DOLLIES, PROPER VEHICLE SIZING IF THERE'S LAST MINUTE CHANGES, ETC).",
 ];
 
+// Labor lines read like our Trellis items: the call's timeline, then the team, any ladders/kit included in the price,
+// the rate and the hours. A call with its own proposal text (typed in the hub's quote editor) prints that instead.
 function itemLines(l) {
-  if (l.team && l.hours) return [`TEAM OF ${l.team}${l.roles ? ` (${l.roles})` : ''}`, `${l.hours} hours @ ${l.rate}/hour`];
-  return [String(l.math || '').replace(/\s*\(estimate; Larry to confirm\)/, '')];
+  if (l.text) return String(l.text).split('\n');
+  if (l.team && l.hours) {
+    const steps = (l.steps || []).map((st) => [st.time, st.label].filter(Boolean).join(' - '));
+    return [...steps, ...(steps.length ? [''] : []), `Team of ${l.team}${l.roles ? ` (${l.roles})` : ''}`, ...(l.attached || []), `@ ${l.rate}/hour`, `${l.hours}hrs`];
+  }
+  // display = the client-facing line (never our costs); math is the internal working
+  return String(l.display ?? l.math ?? '').replace(/\s*\(estimate; Larry to confirm\)/, '').split('\n');
 }
 function itemTitle(l) {
   if (l.section !== 'Labor') return l.label;
@@ -57,7 +64,8 @@ export function proposalFilename(q) {
 }
 
 // Returns Promise<Buffer>.
-export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) {
+// images: optional { [photo path]: Buffer } for item photos (the hub passes them in; PNG or JPEG).
+export function proposalPdf({ inquiry: q, plan, priced, created = new Date(), images = {} }) {
   const title = `${shortDate(q.eventDate)} | ${q.business || q.contact} | ${(q.venue || '').split(',')[0]}`;
   const doc = new PDFDocument({ size: 'LETTER', margins: { top: 34, bottom: 60, left: 50, right: 50 }, bufferPages: true, info: { Title: title, Author: 'Jersey Strike Co' } });
   // Built-in Helvetica only has WinAnsi characters: swap the arrows/symbols Claude likes to use.
@@ -88,12 +96,21 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   // 1. Cover
   header();
   doc.y += 70;
-  doc.font(F).fontSize(17).text(longDate(created.toISOString().slice(0, 10)), L, doc.y, { width: CW, align: 'center' });
-  doc.y += 16; softRule(CW * 0.8, '#e2dcc8'); doc.y += 20;
-  doc.fontSize(14).text('EVENT STAFFING/ PRODUCTION', L, doc.y, { width: CW, align: 'center' });
-  doc.fontSize(12).text('JERSEY STRIKE CO', L, doc.y, { width: CW, align: 'center' });
+  // Cover, like our Trellis proposals: event date, prepared for/date, the option, venue, floral.
+  const [venueName, ...venueRest] = String(q.venue || '').split(',').map((x) => x.trim());
+  const c = (t, size = 12, font = F) => doc.font(font).fontSize(size).text(t, L, doc.y, { width: CW, align: 'center' });
+  doc.font(F).fontSize(17).text(longDate(q.eventDate), L, doc.y, { width: CW, align: 'center' });
+  doc.moveDown(0.6);
+  c(`Prepared For: ${q.business || q.contact || ''}`);
+  c(`Prepared Date: ${created.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', timeZone: 'America/New_York' })}`);
+  if (plan.option_label) { doc.moveDown(0.8); c(plan.option_label); }
+  doc.y += 18; softRule(CW * 0.8, '#e2dcc8'); doc.y += 20;
+  c('VENUE', 14); c(venueName || 'TBD');
+  if (q.floral) { doc.y += 18; softRule(CW * 0.8, '#e2dcc8'); doc.y += 20; c('FLORAL', 14); c(q.floral); }
+  doc.y += 30;
   doc.fontSize(9);
-  ['INSTAGRAM: @JERSEYSTRIKECO', 'EMAIL: TEAM@JERSEYSTRIKE.COM', 'CONTACT: (732) 759-4003'].forEach((t) => doc.text(t, L, doc.y, { width: CW, align: 'center' }));
+  ['INSTAGRAM: @JERSEYSTRIKECO', 'EMAIL: TEAM@JERSEYSTRIKE.COM', 'CONTACT: (732) 759-4003'].forEach((t) => doc.fillColor('#666').text(t, L, doc.y, { width: CW, align: 'center' }));
+  doc.fillColor('#111');
 
   // 2. Intro
   doc.addPage(); header();
@@ -112,23 +129,16 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   doc.addPage(); header();
   doc.font(FB).fontSize(17).text(title, L, doc.y, { width: CW });
   doc.font(F).fontSize(12);
-  doc.text(`Date: ${longDate(q.eventDate)}`, L, doc.y).text(`Venue: ${q.venue || 'TBD'}`, L, doc.y); doc.moveDown(1);
+  doc.text(`Date: ${longDate(q.eventDate)}`, L, doc.y).text(`Venue: ${venueName || 'TBD'}`, L, doc.y);
+  if (venueRest.length) doc.text(`Venue Address: ${venueRest.join(', ')}`, L, doc.y);
+  doc.moveDown(1);
   doc.text(`${q.clientLabel || 'Florist'}: ${q.business || ''}`, L, doc.y);
   if (q.studio) doc.text(`${q.clientLabel || 'Florist'} Address: ${q.studio}`, L, doc.y);
   doc.text(`${q.clientLabel || 'Florist'} Contact: ${[q.contact, q.phone].filter(Boolean).join(' ')}`, L, doc.y);
+  if (q.studioNotes) { doc.moveDown(1); doc.text(`${q.clientLabel || 'Florist'} Studio Notes: ${q.studioNotes}`, L, doc.y, { width: CW }); }
 
-  // 5. Timeline + task list
-  doc.addPage(); doc.x = L; doc.y = 50;
-  doc.font(FBI).fontSize(11.5).text('TIMELINE', IT, doc.y);
-  for (const s of plan.shifts || []) {
-    const line = priced.lines.find((x) => x.label.startsWith(s.label));
-    ensure(40);
-    doc.font(FI).fontSize(11.5).text([s.label, s.date].filter(Boolean).join(' – '), IT, doc.y, { width: ITW });
-    doc.text(`JS Team of ${s.team_size}${s.roles ? ` (${s.roles})` : ''}`, IT, doc.y, { width: ITW });
-    for (const st of s.steps || []) { ensure(16); doc.text(`${st.time} - ${st.label}`, IT, doc.y, { width: ITW }); }
-    if (line?.hours) doc.text(`${line.hours}hrs`, IT, doc.y);
-    doc.moveDown(0.8);
-  }
+  // 5. Task list (each crew call's timeline prints on its own line in the quote breakdown)
+  doc.moveDown(2); doc.x = L; doc.fontSize(11.5);
   // Optional shifts (e.g. an optional strike): shown faded, not in the total.
   for (const s of plan.optional_shifts || []) {
     ensure(40);
@@ -150,13 +160,22 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
   ensure(160);
   doc.font(FB).fontSize(17).text('QUOTE BREAKDOWN', L, doc.y); doc.moveDown(1.2);
   doc.fontSize(11.5);
+  const LABORISH = new Set(['Labor', 'Vehicles', 'Equipment', 'Travel']);
+  let seenItems = false, laborHead = false;
   for (const l of priced.lines) {
+    if (!LABORISH.has(l.section)) seenItems = true;
+    else if (seenItems && !laborHead) { laborHead = true; ensure(70 + itemLines(l).length * 15); doc.moveDown(0.6); doc.font(FB).fontSize(17).text('LABOR', L, doc.y); doc.moveDown(1); doc.fontSize(11.5); }
     const desc = itemLines(l);
-    ensure(36 + desc.length * 15);
+    const pics = (l.photos || []).map((ph) => images[ph.path || ph]).filter(Boolean).slice(0, 3);
+    const PW = 150, textW = ITW - 18 - (pics.length ? PW + 16 : 0);
+    ensure(Math.min(BOTTOM - 60, Math.max(36 + desc.length * 15, pics.length ? pics.length * (PW * 0.9 + 6) : 0)));
     const y0 = doc.y;
-    doc.font(F).text('1', IT, y0);
-    doc.font(FB).text(`${itemTitle(l)}  |  ${money(l.amount)}`, IT + 18, y0, { width: ITW - 18 });
-    doc.font(F); desc.forEach((d) => doc.text(d, IT + 18, doc.y, { width: ITW - 18 }));
+    doc.font(F).text(String(l.qty || 1), IT, y0);
+    doc.font(FB).text(`${itemTitle(l)}  |  ${money(l.amount)}`, IT + 18, y0, { width: textW });
+    doc.font(F); desc.forEach((d) => doc.text(d || ' ', IT + 18, doc.y, { width: textW }));
+    let yPic = y0;
+    for (const img of pics) { try { doc.image(img, R - PW, yPic, { fit: [PW, PW * 1.2] }); yPic += PW * 1.2 + 6; } catch { /* unreadable image: skip */ } }
+    doc.y = Math.max(doc.y, yPic); doc.x = L;
     doc.moveDown(1.1); softRule(); doc.moveDown(1.3);
   }
 
@@ -204,7 +223,7 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date() }) 
       const desc = itemLines(l);
       ensure(30 + desc.length * 15);
       const y0 = doc.y;
-      doc.fillColor(GREY).font(F).text('1', IT, y0);
+      doc.fillColor(GREY).font(F).text(String(l.qty || 1), IT, y0);
       doc.font(FB).text(`${itemTitle(l)}  |  ${money(l.amount)}`, IT + 18, y0, { width: ITW - 18 });
       doc.font(F); desc.forEach((d) => doc.text(d, IT + 18, doc.y, { width: ITW - 18 }));
       doc.moveDown(0.6);

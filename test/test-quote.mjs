@@ -87,7 +87,7 @@ check(bad.status === 403 && calls.length === 0, 'background function rejects req
 
 const res = await handler(new Request('https://x/', { method: 'POST', headers: { 'x-quote-secret': triggerSecret() }, body: JSON.stringify({ inquiry, recordId: 'recABC' }) }));
 check(res.status === 200, 'handler runs end to end');
-const claude = calls.find((c) => c.url.includes('anthropic'));
+const claude = calls.find((c) => c.url.includes('anthropic') && c.body?.tool_choice?.name === 'submit_quote_plan'); // (the first Anthropic call is the local-events web research)
 check(claude && claude.body.messages[0].content[0].type === 'document', 'uploaded PDF is sent to Claude');
 check(claude.body.system[0].text.includes('PRICING FORMULA') && claude.body.system[0].text.includes('Jamie x Greg'), 'Claude gets the pricing formula and past jobs');
 check(calls.filter((c) => c.url.includes('routes.googleapis.com')).length === 6, 'drive times checked from both HQs');
