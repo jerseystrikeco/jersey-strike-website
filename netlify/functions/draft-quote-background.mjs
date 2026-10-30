@@ -50,7 +50,7 @@ export async function draftQuote(inquiry) {
   if (staff.notes?.length) console.log('[quote] staffing:', staff.notes.join(' | '));
   if (research.error) console.log('[quote] local event research:', research.error);
   const { plan, docNotes, model } = await planQuote(inquiry, routes, staff, research);
-  const priced = priceQuote(plan, inquiry, { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '' });
+  const priced = priceQuote(plan, inquiry, { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '', groupByPhase: true });
   return { routes, plan, docNotes, priced, model, staff };
 }
 

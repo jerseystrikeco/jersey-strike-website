@@ -165,8 +165,11 @@ export function mergeRates(over = {}) {
 }
 
 export function priceQuote(plan, inquiry = {}, ctx = {}) {
-  const R = mergeRates(ctx.rates);
-  const g = clientRules(inquiry.business);
+  // plan.rate_overrides: this quote's own rates (labor $/hr, admin %, base fee, van $/mi), set in the hub's quote editor.
+  const ov = Object.fromEntries(Object.entries(plan.rate_overrides || {}).filter(([, v]) => v !== '' && v != null && Number.isFinite(Number(v))).map(([k, v]) => [k, Number(v)]));
+  const R = mergeRates({ ...(ctx.rates || {}), ...ov });
+  // plan.client_rule: pick a client's pricing by hand ('standard' = none), else matched from the business name.
+  const g = plan.client_rule === 'standard' ? null : plan.client_rule ? GRANDFATHERED.find((x) => x.name === plan.client_rule) || null : clientRules(inquiry.business);
   const production = !!inquiry.production || plan.job_type === 'full_production';
   const lines = [];
   const warnings = [];
@@ -186,7 +189,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     if (Math.round(num(s.team_size)) === 1) warnings.push(`"${s.label}" is a solo shift: only OK with a very strong team member, a very easy job, daytime and an easy drive.`);
     if (hrs > 16) warnings.push(`"${s.label}" is ${hrs} hrs portal to portal. Check team safety / hotel.`);
     const kind = s.kind || 'install';
-    let grand = g?.laborPerHour?.[kind];
+    let grand = ov.laborPerHour != null ? undefined : g?.laborPerHour?.[kind]; // a typed labor rate for the quote beats the client's deal
     if (grand != null && g.laborByYear) {
       let yr = null;
       const dm = String(s.date || '').match(/\d{1,2}\/\d{1,2}\/(\d{2,4})/) || String(plan.event_date || inquiry.event_date || '').match(/^(\d{4})-/);
@@ -205,6 +208,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
       if (major) rate = round2(rate * R.majorHolidayMultiplier);
     }
     if (triggers.length && grand != null) warnings.push(`"${s.label}" has premium triggers (${triggers.join(', ')}) but ${g.name} is on grandfathered rates; no premium applied.`);
+    if (num(s.rate_override) > 0) rate = num(s.rate_override); // a rate typed on this call in the quote editor wins
     const team = Math.max(0, Math.round(num(s.team_size)));
     const payRate = major && grand == null ? R.cost.holidayPay : R.cost.teamPay;
     costs.push({ what: `${s.label}: ${team} × (${hrs} + ${R.cost.homeDriveHrs} home drive) hrs × ${fmt(payRate)}`, amount: team * (hrs + R.cost.homeDriveHrs) * payRate, kind: 'labor', shift: si, team, hrs, payRate, holiday: major && grand == null });
@@ -334,9 +338,11 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
 
   // Trellis-style order: sourcing → studio → delivery → install → strike → fabrication → vehicles → equipment → other.
   if (ctx.groupByPhase) {
+    // Sections in order (set up / install before strike), and inside a section by date (multi-day installs: day 1, day 2…).
     const order = Object.fromEntries(PHASES.map(([k], i) => [k, i]));
-    const keyed = lines.map((l, i) => [order[l.phase] ?? 99, i, l]).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-    lines.splice(0, lines.length, ...keyed.map((x) => x[2]));
+    const dkey = (l) => { const m = String(l.label || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? Number(`${m[3].length === 2 ? `20${m[3]}` : m[3]}${m[1].padStart(2, '0')}${m[2].padStart(2, '0')}`) : 0; };
+    const keyed = lines.map((l, i) => [order[l.phase] ?? 99, dkey(l), i, l]).sort((a, b) => a[0] - b[0] || (a[1] && b[1] ? a[1] - b[1] : 0) || a[2] - b[2]);
+    lines.splice(0, lines.length, ...keyed.map((x) => x[3]));
   }
   const itemsSubtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
 
@@ -350,7 +356,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   // the draft shows the real number and the admin team decides.
   const minimum = g?.noMinimum ? 0 : R.minimums[production ? 'full_production' : plan.job_type] || 0;
   // Full productions carry a 12% production planning fee instead of the admin fee.
-  const adminPct = production ? R.production.planningFeePct : g?.adminFeePct ?? R.adminFeePct;
+  const adminPct = ov.adminFeePct != null ? ov.adminFeePct : production ? R.production.planningFeePct : g?.adminFeePct ?? R.adminFeePct;
   const feeLabel = production ? 'Production planning fee' : 'Admin fee';
   if (production && g?.adminFeePct != null) warnings.push(`${g.name} normally gets a ${Math.round(g.adminFeePct * 100)}% admin fee; this full production uses the ${Math.round(R.production.planningFeePct * 100)}% production planning fee instead. Confirm.`);
   const admin = round2(subtotal * adminPct);
