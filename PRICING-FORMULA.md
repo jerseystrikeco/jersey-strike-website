@@ -33,9 +33,9 @@ Modeled on Social Supply (DC), who charge a 15% design fee up front, a 50% depos
 - Labor, team, trucking, vehicles, equipment, base fee, travel: priced exactly as above (same rates).
 - Build it in phases, each with its own crew call(s), date and team: **sourcing** (floral/decor, qty × a per-unit recipe at our cost × 2), **studio prep / processing**, **delivery**, **install**, **strike**. Leave out any phase the client keeps; a client can outsource just one installation or the whole event. Other charges (floral disposal, a delivery fee) are their own line items (qty × price).
 - The proposal never shows our cost: sourcing and fabrication lines print qty × price each.
-- Sourced items (chandeliers, greenery, disco balls, lanterns, decor, hardware we buy for the job): our cost × 2 = 50% margin (same as fabrication materials). Claude estimates our cost; confirm real prices before quoting.
+- Sourced items (chandeliers, greenery, disco balls, lanterns, decor, hardware we buy for the job): our cost × 2 = 50% margin. Claude estimates our cost; confirm real prices before quoting.
 - Outside vendor rentals / pass-throughs (lift, truss, tent add-ons): our cost + 10% handling.
-- Custom fabrication: same as below (materials × 2 + shop hours × $65).
+- Custom fabrication: same as below (materials × 2.5 + shop hours × $75).
 - Production planning fee: 12% of the full subtotal, INSTEAD of the 8% admin fee (covers the producer: scoping call, walkthrough, production plan, vendor coordination, close-out report).
 - Terms: the 12% planning fee is invoiced at booking, due before planning begins and non-refundable if the event is cancelled; then a 50% deposit on the remainder holds the date. (Replaces the 15% retainer for productions.)
 
@@ -56,7 +56,7 @@ Standard is $65/hr. A crew call gets +$10/hr per trigger, max +$20 ($85), only o
 (Recommended by Claude from past $75–85 quotes; Alyssa to confirm.)
 
 ## Custom fabrication
-Claude estimates every custom build (materials cost + shop hours) from past fab jobs. Price = materials × 2 + shop hours × $65 (multiplier TO CONFIRM with Larry). Install/strike of the build goes in the normal crew calls. Any draft with fabrication gets "[Alyssa: check fab with Larry]" in the email subject and a section with Claude's flags + questions for Larry. If JS already owns something that fits (wooden chuppah rental $950, arch rental, white plinths $75, pole urn + plinth, stage backdrop), the draft suggests renting it instead.
+Claude estimates every custom build (materials cost + shop hours) from past fab jobs. Price = materials × 2.5 + shop hours × $75 (from Alyssa's Heart + Soil quote; shop labor costs us $65/hr). Every freestanding build carries 8 sand bags of ballast. Size the build from the inspiration photo and the count (cards, guests, shelves) and print the dimensions, since they drive the price. Rented furniture we dress gets a hinged C-shape enclosure (back + sides) fitted in our Little Egg Harbor shop 2 days ahead; the client rents it and ships any wallpaper/fabric to us. Wall-size builds ride in a 15 ft U-Haul with a team of 3. Offer the fully custom version as an optional add-on, not in the total. Install/strike of the build goes in the normal crew calls. Any draft with fabrication gets "[Alyssa: check fab with Larry]" in the email subject and a section with Claude's flags + questions for Larry. If JS already owns something that fits (wooden chuppah rental $950, arch rental, white plinths $75, pole urn + plinth, stage backdrop), the draft suggests renting it instead.
 
 ## Solo shifts
 Team of 1 only with a very strong team member AND a very easy job AND daytime AND an easy drive. Night strikes and ladder work: minimum 2.

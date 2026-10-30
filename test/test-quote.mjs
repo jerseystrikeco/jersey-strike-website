@@ -50,9 +50,9 @@ const wprem = priceQuote({ shifts: [{ label: 'Wile install', kind: 'install', te
 check(wprem.lines[0].rate === 50 && wprem.warnings.some((w) => /grandfathered rates; no premium/.test(w)), 'Wile grandfathered rate is not bumped by premiums (flagged instead)');
 
 const fab = priceQuote({ fabrication: [{ label: 'Custom 8x8 metal chuppah', materials_cost: 900, shop_hours: 14, confidence: 'medium', flags: ['Weight of florals unknown'], questions_for_larry: ['Powder coat or paint?'] }] }, {});
-check(fab.lines[0].amount === 2710 && fab.fabs.length === 1 && fab.warnings.some((w) => /Larry/.test(w)), 'fabrication: materials x2 + shop hrs x $65, flagged for Larry');
+check(fab.lines[0].amount === 3300 && fab.fabs.length === 1 && fab.warnings.some((w) => /Larry/.test(w)), 'fabrication: materials x2.5 + shop hrs x $75, flagged for Larry');
 const { quoteSubject } = await import('../netlify/functions/lib/quote-render.mjs');
-check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $2,926.80'), 'fab jobs flag the email subject');
+check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $3,564.00'), 'fab jobs flag the email subject');
 
 check(wile.margin.cost > 4500 && wile.margin.cost < 6000 && wile.margin.pct > 40 && wile.margin.pct < 55, `Wile weekend margin ≈ ${wile.margin.pct}% (cost ${wile.margin.cost})`);
 check(/Wile Events exception|worth it/.test(wile.margin.verdict) && !wile.warnings.some((w) => /Gross margin/.test(w)), 'Wile is judged on gross-profit dollars, not %: ' + wile.margin.verdict);

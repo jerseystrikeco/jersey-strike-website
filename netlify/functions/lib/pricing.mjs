@@ -38,7 +38,8 @@ export const RATES = {
   mealPerPersonDay: 50, // destination jobs
   // Custom fabrication (Claude's estimate; Larry confirms every one):
   // price = materials (our cost) x materialsMarkup + shop hours x shopRate.
-  fab: { materialsMarkup: 2, shopRate: 65 },
+  // Alyssa's Heart + Soil 6/12/27 quote: materials x 2.5, shop labor billed $75/hr, costs us $65/hr.
+  fab: { materialsMarkup: 2.5, shopRate: 75 },
   // What jobs cost us (for the gross-margin check; never shown to clients).
   cost: {
     teamPay: 30, // $/hr, all jobs
@@ -47,6 +48,7 @@ export const RATES = {
     homeDriveHrs: 1, // extra paid drive per person per crew call (home <-> HQ round trip), avg assumption
     studioDayHrs: 8, // paid hours per person on a flat studio day
     fuelPerMile: 0.7, // our fuel cost, any vehicle
+    shopPay: 65, // $/hr, fabrication shop labor (Larry)
   },
   targetMargin: 0.5, // aim for 50% gross profit on every job
   bigJobGrossProfit: 2000, // a job clearing $2k+ gross profit can run under 50%
@@ -267,7 +269,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     const hrs = Math.max(0, num(f.shop_hours));
     const amount = mat * R.fab.materialsMarkup + hrs * R.fab.shopRate;
     fabs.push({ ...f, amount: round2(amount) });
-    costs.push({ what: `${f.label || 'Fabrication'}: materials + ${hrs} shop hrs × ${fmt(R.cost.teamPay)}`, amount: mat + hrs * R.cost.teamPay });
+    costs.push({ what: `${f.label || 'Fabrication'}: materials + ${hrs} shop hrs × ${fmt(R.cost.shopPay)}`, amount: mat + hrs * R.cost.shopPay });
     const fq = Math.max(1, Math.round(num(f.qty, 1)));
     add('Fabrication', f.label || 'Custom fabrication',
       `materials ${fmt(mat)} × ${R.fab.materialsMarkup} + ${hrs} shop hrs × ${fmt(R.fab.shopRate)} (estimate; Larry to confirm)`, amount,
