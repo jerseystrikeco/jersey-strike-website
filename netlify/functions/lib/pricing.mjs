@@ -18,6 +18,9 @@ export const RATES = {
   majorHolidayMultiplier: 1.5,
   studioDayPerPerson: 450, // processing / design studio / reset days, flat
   baseFeePerVenueDay: 300,
+  // Base fee by EVENT year (Alyssa, 10/30/26): 2027+ events pay $350 per crew call on site (install and strike are
+  // 2 calls even on the same day), like her Heart + Soil 6/12/27 quote. Earlier dates, and grandfathered clients, keep $300 per venue day.
+  baseFeeByYear: { 2027: { amount: 350, per: 'call' } },
   adminFeePct: 0.08, // applied last, on everything
   // Full production jobs (Full Production page, or job_type "full_production"). Modeled on Social Supply (DC).
   production: {
@@ -349,9 +352,23 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   const itemsSubtotal = round2(lines.reduce((s, l) => s + l.amount, 0));
 
   // Base service fee: per day on site at a venue
-  const baseDays = Math.max(0, Math.round(num(plan.base_fee_days)));
   const charges = [];
-  if (baseDays) charges.push({ label: 'Base Service', math: `${plural(baseDays, 'venue day')} × ${fmt(R.baseFeePerVenueDay)}`, amount: baseDays * R.baseFeePerVenueDay });
+  const eyMatch = String(plan.event_date || inquiry.event_date || inquiry.eventDate || '').match(/^(\d{4})-/) || String((plan.shifts || [])[0]?.date || '').match(/\d{1,2}\/\d{1,2}\/(\d{2,4})/);
+  const eventYear = eyMatch ? Number(eyMatch[1].length === 2 ? `20${eyMatch[1]}` : eyMatch[1]) : null;
+  const byYear = Object.keys(R.baseFeeByYear || {}).map(Number).sort().filter((y) => eventYear && y <= eventYear).pop();
+  const yearRule = byYear && !g ? R.baseFeeByYear[byYear] : null; // grandfathered clients (Wile, APTP, ALAT) keep $300 per venue day
+  let baseFee;
+  if (yearRule?.per === 'call') {
+    const venueCalls = (plan.shifts || []).filter((x) => x.kind !== 'design' && x.venue_day !== false).length;
+    const n = plan.base_fee_calls != null && plan.base_fee_calls !== '' ? Math.max(0, Math.round(num(plan.base_fee_calls))) : venueCalls;
+    const amt = ov.baseFeePerVenueDay ?? yearRule.amount;
+    baseFee = { per: 'call', count: n, amount: amt, year: byYear };
+    if (n) charges.push({ label: 'Base Service', math: `${plural(n, 'crew call')} × ${fmt(amt)}`, amount: n * amt });
+  } else {
+    const baseDays = Math.max(0, Math.round(num(plan.base_fee_days)));
+    baseFee = { per: 'day', count: baseDays, amount: R.baseFeePerVenueDay };
+    if (baseDays) charges.push({ label: 'Base Service', math: `${plural(baseDays, 'venue day')} × ${fmt(R.baseFeePerVenueDay)}`, amount: baseDays * R.baseFeePerVenueDay });
+  }
   let subtotal = round2(itemsSubtotal + charges.reduce((s, c) => s + c.amount, 0));
 
   // Minimums ($1,500 strike / $5,000 full-service, all-in incl. admin) are FLAGGED, not added:
@@ -395,7 +412,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   warnings.unshift(...eventFlags, ...checkReach(plan, inquiry), ...inv.warnings);
 
   return {
-    lines, charges, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null, localEvents: events,
+    lines, charges, baseFee, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null, localEvents: events,
     grandfathered: g ? g.note : '',
   };
 }

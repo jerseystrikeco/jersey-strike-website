@@ -7,6 +7,7 @@ Minimums: $1,500 strike · $5,000 full-service day-of. These are all-in totals, 
 
 ## Line items
 - Base fee: $300 per service day on site at the venue (establishes the floor). Install and strike on different days = $600. An install early in the day and the strike that same night (even if the strike starts at or runs past midnight) are ONE service day = $300 (Alyssa, 10/27/26).
+  - 2027 and later events (by event date): $350 per crew call on site instead (install and strike = 2 calls, even on the same day), as in Alyssa's Heart + Soil 6/12/27 quote. 2026 dates, and grandfathered clients (Wile, APTP, ALAT), keep $300 per service day.
   - Exceptions: no extra base fee when a split or next-day delivery is for our benefit (our schedule, team safety or convenience), e.g. a late-night strike where we deliver back to the studio the next morning. The draft flags these for admin review and doesn't add a base fee.
 - Labor: $65/hr per person for ALL labor types (design planning, set up/install, strike, flips, returns); hours = portal-to-portal timeline × team size
 - Fuel: vans $1/mile per van (two vans = double the miles); box trucks (incl. U-Haul) $1/mile per round trip, capped at $200 per round trip (short local trips don't burn a full tank; install trip and strike trip each count as one). Trellis note: by mile or flat $100–$200 per event depending on scope; our fuel cost ≈ $0.70/mile

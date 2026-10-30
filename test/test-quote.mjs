@@ -51,6 +51,10 @@ check(wprem.lines[0].rate === 50 && wprem.warnings.some((w) => /grandfathered ra
 
 const fab = priceQuote({ fabrication: [{ label: 'Custom 8x8 metal chuppah', materials_cost: 900, shop_hours: 14, confidence: 'medium', flags: ['Weight of florals unknown'], questions_for_larry: ['Powder coat or paint?'] }] }, {});
 check(fab.lines[0].amount === 3300 && fab.fabs.length === 1 && fab.warnings.some((w) => /Larry/.test(w)), 'fabrication: materials x2.5 + shop hrs x $75, flagged for Larry');
+const hs = priceQuote({ event_date: '2027-06-12', base_fee_days: 1, shifts: [{ label: 'Install', kind: 'install', team_size: 3, depart_hq: '6:00am', back_hq: '4:00pm' }, { label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '6:00pm', back_hq: '4:00am' }] }, { business: 'Heart & Soil Flowers' });
+check(hs.charges[0].amount === 700 && hs.baseFee.per === 'call', `2027 base fee: 2 crew calls x $350 = ${hs.charges[0].amount}`);
+const hs26 = priceQuote({ event_date: '2026-06-12', base_fee_days: 1, shifts: [{ label: 'Install', kind: 'install', team_size: 3, depart_hq: '6:00am', back_hq: '4:00pm' }, { label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '6:00pm', back_hq: '4:00am' }] }, { business: 'Heart & Soil Flowers' });
+check(hs26.charges[0].amount === 300 && hs26.baseFee.per === 'day', `2026 base fee: 1 venue day x $300 = ${hs26.charges[0].amount}`);
 const { quoteSubject } = await import('../netlify/functions/lib/quote-render.mjs');
 check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $3,564.00'), 'fab jobs flag the email subject');
 
