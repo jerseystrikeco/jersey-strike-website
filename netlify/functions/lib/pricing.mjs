@@ -153,8 +153,9 @@ export function priceUhaul({ days, miles, quotedCost }) {
 // plan: Claude's structured plan (see claude.mjs schema). inquiry: normalized form data.
 // Phases (Trellis-style sections): every line says which part of the job it belongs to, so the hub's quote editor
 // and the proposal can group them (ctx.groupByPhase) and full productions read in order.
-export const PHASES = [['sourcing', 'Floral + decor sourcing'], ['studio', 'Studio prep + processing'], ['delivery', 'Delivery + pickup'], ['install', 'Install / set up'],
-  ['strike', 'Strike'], ['fabrication', 'Fabrication'], ['transport', 'Vehicles + transport'], ['equipment', 'Equipment'], ['other', 'Other'], ['travel', 'Travel']];
+// Order = how the proposal reads: what we make/source/rent first, then the labor (crew calls), vehicles + equipment.
+export const PHASES = [['sourcing', 'Floral + decor sourcing'], ['fabrication', 'Fabrication'], ['rentals', 'Rentals (our library)'], ['studio', 'Studio prep + processing'],
+  ['delivery', 'Delivery + pickup'], ['install', 'Install / set up'], ['strike', 'Strike'], ['transport', 'Vehicles + transport'], ['equipment', 'Equipment'], ['other', 'Other'], ['travel', 'Travel']];
 export const phaseOfKind = (k) => ({ design: 'studio', processing: 'studio', studio: 'studio', delivery: 'delivery', pickup: 'delivery', return: 'delivery', strike: 'strike' }[k] || 'install');
 
 // ctx.rates: optional overrides (e.g. the hub's dated rate card): { laborPerHour, baseFeePerVenueDay, adminFeePct, vanPerMile, cost: { teamPay, ... } }.
