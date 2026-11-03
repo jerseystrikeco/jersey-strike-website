@@ -55,6 +55,24 @@ const hs = priceQuote({ event_date: '2027-06-12', base_fee_days: 1, shifts: [{ l
 check(hs.charges[0].amount === 700 && hs.baseFee.per === 'call', `2027 base fee: 2 crew calls x $350 = ${hs.charges[0].amount}`);
 const hs26 = priceQuote({ event_date: '2026-06-12', base_fee_days: 1, shifts: [{ label: 'Install', kind: 'install', team_size: 3, depart_hq: '6:00am', back_hq: '4:00pm' }, { label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '6:00pm', back_hq: '4:00am' }] }, { business: 'Heart & Soil Flowers' });
 check(hs26.charges[0].amount === 300 && hs26.baseFee.per === 'day', `2026 base fee: 1 venue day x $300 = ${hs26.charges[0].amount}`);
+const bt = (mi) => priceQuote({ vehicles: [{ kind: 'box_truck', label: 'Box truck', round_trip_miles: mi, trips: 2 }] }, {}).lines.find((l) => /fuel/.test(l.label))?.amount;
+check(bt(50) === 400 && bt(330) === 660, `box truck fuel: $1/mi per round trip, $200 minimum, no cap (50 mi x2 = ${bt(50)}, 330 mi x2 = ${bt(330)})`);
+const { truckViolations, googleTruckLeg } = await import('../netlify/functions/lib/truck-routes.mjs');
+const step = (t, lat, lng = -74.2) => ({ navigationInstruction: { instructions: t }, startLocation: { latLng: { latitude: lat - 0.1, longitude: lng } }, endLocation: { latLng: { latitude: lat, longitude: lng } } });
+const gspNorth = { legs: [{ steps: [step('Merge onto Garden State Pkwy N', 40.7)] }], distanceMeters: 160000, duration: '5400s' };
+const gspSouth = { legs: [{ steps: [step('Merge onto Garden State Pkwy S', 39.4)] }], distanceMeters: 100000, duration: '3600s' };
+const hutch = { legs: [{ steps: [step('Take the Hutchinson River Pkwy N', 40.95, -73.8)] }] };
+const tpk = { legs: [{ steps: [step('Merge onto New Jersey Tpke N', 40.7)] }], distanceMeters: 175000, duration: '6000s' };
+check(truckViolations(gspNorth).length === 1 && !truckViolations(gspSouth).length && truckViolations(hutch).length === 1 && !truckViolations(tpk).length, 'truck rules: GSP north of Exit 105 + NY parkways banned; GSP south + Turnpike OK');
+const realFetch = globalThis.fetch;
+globalThis.fetch = async () => ({ ok: true, json: async () => ({ routes: [gspNorth, tpk] }) });
+const tl = await googleTruckLeg('k', 'Forked River, NJ', 'Montclair, NJ');
+globalThis.fetch = realFetch;
+check(tl.legal && tl.miles === 109 && tl.avoided[0].includes('Exit 105'), `truck leg skips the GSP route for the Turnpike one (${tl.miles} mi, ${tl.note})`);
+const { researchDays, uncovered } = await import('../netlify/functions/lib/local-research.mjs');
+const rd = researchDays('2027-06-12', { shifts: [{ date: '6/10/27', kind: 'install' }, { date: 'Sat 6/12/27', kind: 'strike' }], travel: { hotel_nights: 2 } });
+check(rd.map((d) => d.date).join() === '2027-06-09,2027-06-10,2027-06-12,2027-06-13' && rd[0].why.includes('travel in'), `research days: install, event/strike, travel in + back (${rd.map((d) => d.date).join(', ')})`);
+check(uncovered(rd, ['2027-06-12']).map((d) => d.date).join() === '2027-06-09,2027-06-10', 'second search only covers days the first one missed');
 const { quoteSubject } = await import('../netlify/functions/lib/quote-render.mjs');
 check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $3,564.00'), 'fab jobs flag the email subject');
 
@@ -94,7 +112,8 @@ check(res.status === 200, 'handler runs end to end');
 const claude = calls.find((c) => c.url.includes('anthropic') && c.body?.tool_choice?.name === 'submit_quote_plan'); // (the first Anthropic call is the local-events web research)
 check(claude && claude.body.messages[0].content[0].type === 'document', 'uploaded PDF is sent to Claude');
 check(claude.body.system[0].text.includes('PRICING FORMULA') && claude.body.system[0].text.includes('Jamie x Greg'), 'Claude gets the pricing formula and past jobs');
-check(calls.filter((c) => c.url.includes('routes.googleapis.com')).length === 6, 'drive times checked from both HQs');
+check(calls.filter((c) => c.url.includes('routes.googleapis.com') && !c.body?.computeAlternativeRoutes).length === 6, 'drive times checked from both HQs');
+check(calls.filter((c) => c.url.includes('routes.googleapis.com') && c.body?.computeAlternativeRoutes).length >= 3, 'every leg also gets a truck-legal route');
 const mail = calls.find((c) => c.url.includes('resend'));
 check(mail && mail.body.to[0] === 'inquire@jerseystrike.com' && !mail.body.reply_to, 'review email goes to admins, no client reply-to');
 check(mail.body.subject.startsWith('Re: New Inquiry:') && /inquiry-/.test(mail.body.headers['In-Reply-To']) && mail.body.text.startsWith('Draft quote $10,056.90'), 'draft threads under the inquiry email: ' + mail.body.subject);
@@ -105,6 +124,28 @@ check(at && at.url.endsWith('/tblvthafdL2XhCDZt/recABC') && at.body.fields.Statu
 check(mail.body.attachments?.[0]?.filename.endsWith('.pdf') && Buffer.from(mail.body.attachments[0].content, 'base64').subarray(0, 4).toString() === '%PDF', 'proposal PDF attached: ' + mail.body.attachments?.[0]?.filename);
 writeFileSync(new URL('./quote-preview.html', import.meta.url), mail.body.html);
 writeFileSync(new URL('./proposal-preview.pdf', import.meta.url), Buffer.from(mail.body.attachments[0].content, 'base64'));
+
+// Web search finds a local happening -> Version 1 (standard) + Version 2 (planned around it), two emails, two hub drafts
+calls.length = 0;
+process.env.HUB_URL = 'https://hub.example.com'; process.env.HUB_INTAKE_TOKEN = 'test';
+globalThis.fetch = async (url, opts = {}) => {
+  url = String(url);
+  const body = opts.body ? JSON.parse(opts.body) : null;
+  calls.push({ url, body, method: opts.method });
+  if (url.includes('routes.googleapis.com')) return Response.json({ routes: [{ distanceMeters: 90000, duration: '5400s' }] });
+  if (url.includes('api.anthropic.com') && body?.tools?.some((t) => t.type?.startsWith('web_search'))) return Response.json({ content: [{ type: 'text', text: '- Sat 10/24/26: Stone Harbor fall festival, 10am-4pm, 96th St closed, street parking gone near the venue, stoneharbor.gov' }] });
+  if (url.includes('api.anthropic.com')) return Response.json({ model: 'test', stop_reason: 'tool_use', content: [{ type: 'tool_use', name: 'submit_quote_plan', input: JSON.parse(JSON.stringify(plan)) }] });
+  if (url.includes('example.com/files')) return new Response(Buffer.from('%PDF-1.4 test'), { headers: { 'content-type': 'application/pdf' } });
+  return Response.json({ id: 'ok', ok: true });
+};
+await handler(new Request('https://x/', { method: 'POST', headers: { 'x-quote-secret': triggerSecret() }, body: JSON.stringify({ inquiry, recordId: 'recABC' }) }));
+const plans = calls.filter((c) => c.url.includes('anthropic') && c.body?.tool_choice?.name === 'submit_quote_plan');
+const mails = calls.filter((c) => c.url.includes('resend'));
+const hubPosts = calls.filter((c) => c.url.includes('hub.example.com') && c.url.includes('/api/proposal'));
+check(plans.length === 2 && /VERSION 2/.test(JSON.stringify(plans[1].body.messages)) && !/fall festival/.test(JSON.stringify(plans[0].body.messages)), 'local happening found: Version 2 is planned around it (Version 1 is the standard plan)');
+check(mails.length === 2 && /Version 2/.test(mails[1].body.subject) && /VERSION 1 of 2/.test(mails[0].body.text) && /fall festival/.test(mails[1].body.text) && /Version 2\.pdf$/.test(mails[1].body.attachments?.[0]?.filename || ''), 'two review emails: Version 1 notes the finding, Version 2 has its own PDF');
+check(hubPosts.length === 2 && hubPosts[1].body.draft?.version === 2, 'both drafts go to the lead in the hub (Version 2 marked)');
+delete process.env.HUB_URL; delete process.env.HUB_INTAKE_TOKEN;
 
 // Claude failure -> admins get a "needs manual quote" email
 calls.length = 0;

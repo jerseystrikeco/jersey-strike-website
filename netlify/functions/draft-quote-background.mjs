@@ -41,17 +41,50 @@ export const QF = {
 const truckish = (inq) =>
   (inq.vehicles || []).some((v) => /box truck|ft/i.test(v)) || (inq.teamNeeds || []).some((v) => /box truck/i.test(v));
 
+// Two versions (Alyssa, 11/3/26). Version 1 = the standard plan (our in-code event calendar still applies).
+// Then the web search runs for EVERY day of that plan (event day, crew calls, studio days, travel in / back);
+// if it finds something that could affect us (traffic, closures, parking, a film shoot, another event at the venue),
+// Claude drafts Version 2 planned around it, and both drafts note what was found and the price difference.
 export async function draftQuote(inquiry) {
   const routes = await planRoutes(inquiry, { truck: truckish(inquiry) }).catch((e) => ({ available: false, notes: [`Routing failed: ${e.message}`] }));
-  const [staff, research] = await Promise.all([
-    staffCandidates(inquiry, { hq: routes.hq, venue: inquiry.venue }).catch((e) => ({ available: false, notes: [`Staffing not checked: ${e.message}`] })),
-    researchLocalEvents(inquiry),
-  ]);
+  const staff = await staffCandidates(inquiry, { hq: routes.hq, venue: inquiry.venue }).catch((e) => ({ available: false, notes: [`Staffing not checked: ${e.message}`] }));
   if (staff.notes?.length) console.log('[quote] staffing:', staff.notes.join(' | '));
+  const v1note = { notes: 'Not used in Version 1 (the standard plan). After this plan, the web search checks every day of it; if it finds local happenings, a Version 2 is drafted around them.' };
+  const { plan, docNotes, model } = await planQuote(inquiry, routes, staff, v1note);
+  const research = await researchLocalEvents(inquiry, plan).catch((e) => ({ notes: '', error: e.message }));
   if (research.error) console.log('[quote] local event research:', research.error);
-  const { plan, docNotes, model } = await planQuote(inquiry, routes, staff, research);
-  const priced = priceQuote(plan, inquiry, { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '', groupByPhase: true });
-  return { routes, plan, docNotes, priced, model, staff };
+  const ctx = { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '', groupByPhase: true };
+  plan.local_research = research.notes || '';
+  const found = !!(research.notes && !research.none);
+  let v2 = null;
+  if (found) {
+    const bullets = research.notes.split('\n').map((x) => x.trim()).filter((x) => /^[-•*]/.test(x)).map((x) => x.replace(/^[-•*]\s*/, ''));
+    const hits = bullets.length ? bullets : [research.notes];
+    try {
+      const r2 = await planQuote(inquiry, routes, staff, { notes: `${research.notes}
+
+VERSION 2: this is the second draft. Version 1 was planned without these findings. Plan this version AROUND every finding above that could affect the job (any crew-call, studio or travel day): add the buffer to every affected drive leg and move departures earlier, plan the approach around closures (other bridge/tunnel/avenue, truck-legal), plan parking and loading (dock, side street, garage, longer carry), and add a parking/garage line if we'd pay for one. Start "assumptions" with one line per finding saying exactly what you changed for it ("Version 2: <finding> -> <change>"). If a finding can't affect this job, say so in that line and change nothing for it.` });
+      v2 = { plan: r2.plan, docNotes: r2.docNotes, model: r2.model };
+      v2.plan.option_label = 'Version 2';
+      v2.plan.local_research = research.notes;
+      v2.priced = priceQuote(v2.plan, inquiry, ctx);
+      v2.hits = hits;
+    } catch (e) {
+      console.error('[quote] Version 2 draft failed:', e.message);
+      plan.red_flags = [...(plan.red_flags || []), `Web search found possible local happenings, but the Version 2 draft failed (${e.message}). Plan around these by hand: ${hits.join(' | ')}`];
+    }
+  }
+  const priced = priceQuote(plan, inquiry, ctx);
+  if (v2) {
+    const diff = Math.round((v2.priced.total - priced.total) * 100) / 100;
+    const money = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    plan.option_label = 'Version 1';
+    plan.red_flags = [`VERSION 1 of 2 (standard plan). The web search found ${v2.hits.length} possible local happening(s); Version 2 (${money(v2.priced.total)}, ${diff >= 0 ? '+' : ''}${money(diff)}) is planned around them and comes as a separate email: ${v2.hits.join(' | ')}`, ...(plan.red_flags || [])];
+    v2.plan.red_flags = [`VERSION 2 of 2: planned around local happenings the web search found (Version 1 standard plan: ${money(priced.total)}; this one ${diff >= 0 ? '+' : ''}${money(diff)}). Found: ${v2.hits.join(' | ')}`, ...(v2.plan.red_flags || [])];
+  } else if (!research.error && research.notes) {
+    plan.red_flags = [...(plan.red_flags || []), `Local happenings web search: ${research.notes}`];
+  }
+  return { routes, plan, docNotes, priced, model, staff, v2 };
 }
 
 export default async (req) => {
@@ -98,8 +131,11 @@ export default async (req) => {
   }
 
   const args = { inquiry, ...result, recordUrl };
+  const v2 = result.v2;
+  const v2File = () => proposalFilename(inquiry).replace(/\.pdf$/i, ' - Version 2.pdf');
+  const v2args = v2 ? { inquiry, ...result, plan: v2.plan, priced: v2.priced, docNotes: v2.docNotes, model: v2.model, recordUrl } : null;
   // Client-ready proposal PDF (Trellis layout) for the admin team to review/forward.
-  let attachments; let pdfBytes = null;
+  let attachments; let pdfBytes = null; let pdf2 = null;
   try {
     const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced });
     pdfBytes = pdf;
@@ -107,6 +143,7 @@ export default async (req) => {
   } catch (e) {
     console.error('[quote] proposal PDF failed:', e.message);
   }
+  if (v2) pdf2 = await proposalPdf({ inquiry, plan: v2.plan, priced: v2.priced }).catch((e) => { console.error('[quote] Version 2 PDF failed:', e.message); return null; });
   const steps = await Promise.allSettled([
     // Threaded under the original inquiry email (internal only: no client address anywhere).
     sendEmail({ subject: `Re: ${subjectFor(inquiry)}`, html: renderQuoteEmail(args), text: `${quoteSubject(inquiry, result.priced)}\n\n` + renderQuoteText(args) + '\n\n' + renderFlagsText(args),
@@ -114,9 +151,13 @@ export default async (req) => {
     recordId ? updateAirtable(recordId, args) : Promise.reject(new Error('no Airtable record id (Phase 1 save failed)')),
     // The same draft PDF + total on the lead in the hub (the total is owner-only there).
     pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId, plan: result.plan }) : Promise.reject(new Error('no proposal PDF')),
+    // Version 2 (planned around local happenings): its own email in the same thread + its own draft on the lead.
+    v2 ? sendEmail({ subject: `Re: ${subjectFor(inquiry)} · Version 2 (planned around local happenings)`, html: renderQuoteEmail(v2args), text: `${quoteSubject(inquiry, v2.priced)} · Version 2\n\n` + renderQuoteText(v2args) + '\n\n' + renderFlagsText(v2args),
+      headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments: pdf2 ? [{ filename: v2File(), content: pdf2.toString('base64') }] : undefined }) : Promise.resolve('no version 2'),
+    v2 && pdf2 ? sendProposalToHub(inquiry, { pdf: pdf2, filename: v2File(), total: v2.priced.total, leadId: hubLeadId, plan: v2.plan, version: 2 }) : Promise.resolve('no version 2'),
   ]);
   steps.forEach((r, i) => {
-    const step = ['email', 'airtable', 'hub'][i];
+    const step = ['email', 'airtable', 'hub', 'email v2', 'hub v2'][i];
     if (r.status === 'rejected') console.error(`[quote] ${step} failed:`, r.reason?.message || r.reason);
     else console.log(`[quote] ${step} ok`);
   });

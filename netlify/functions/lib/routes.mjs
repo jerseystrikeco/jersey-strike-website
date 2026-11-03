@@ -1,12 +1,16 @@
 // Drive times and mileage for the quote.
 // Vans/cars: Google Maps Routes API (GOOGLE_MAPS_API_KEY).
-// Box trucks: HERE truck routing (HERE_API_KEY, optional), which avoids parkways, low bridges, etc.
+// Box trucks / U-Hauls: every leg also gets a truck-legal time + miles (lib/truck-routes.mjs: Google alternatives
+// checked against truck-banned roads like the GSP north of Exit 105 and NY parkways). HERE truck routing
+// (HERE_API_KEY, optional) is used instead when set, since it also knows low bridges.
 // If a key is missing, Claude estimates the drive and the draft flags it.
 
 export const HQS = [
   { name: 'Forked River', address: '1404 Circle Dr, Forked River, NJ 08731', region: 'South Jersey' },
   { name: 'Montclair', address: 'Montclair, NJ', region: 'North Jersey + NY' },
 ];
+
+import { googleTruckLeg } from './truck-routes.mjs';
 
 const M_PER_MI = 1609.344;
 export const DRIVE_BUFFER_MIN = Number(process.env.DRIVE_BUFFER_MIN || 15);
@@ -100,22 +104,29 @@ export async function planRoutes(inquiry, { truck = false } = {}) {
   best.legs.forEach((leg, i) => { leg.ny = isNY(leg.from) || isNY(leg.to); leg.plan_minutes = plan(leg.minutes, i === 0, leg.ny); });
   notes.push(`Used ${best.hq.name} HQ (${best.minutes} min total loop${ok[1] ? ` vs ${ok[1].minutes} min from ${ok[1].hq.name}` : ''}).`);
 
-  if (truck) {
-    if (process.env.HERE_API_KEY) {
-      for (const leg of best.legs) {
-        try {
-          const t = await hereTruckLeg(leg.from, leg.to);
-          leg.truckMiles = t.miles;
-          leg.truckMinutes = t.minutes;
-          leg.plan_minutes = plan(t.minutes, leg === best.legs[0], leg.ny);
-        } catch (e) {
-          notes.push(`Truck route ${leg.from} → ${leg.to}: ${e.message}`);
-        }
+  // Truck-legal version of every leg, always (Claude may pick a U-Haul even when the client didn't mention one).
+  for (const [i, leg] of best.legs.entries()) {
+    try {
+      let t;
+      if (process.env.HERE_API_KEY) {
+        const h = await hereTruckLeg(leg.from, leg.to);
+        t = { ...h, legal: true, note: 'HERE truck routing (weight, height, parkways, low bridges).' };
+      } else {
+        t = await googleTruckLeg(process.env.GOOGLE_MAPS_API_KEY, leg.from, leg.to);
       }
-    } else {
-      notes.push('HERE_API_KEY not set: box truck legs use the car route. Check for parkway / low-clearance restrictions and pad drive times.');
+      leg.truckMiles = t.miles;
+      leg.truckMinutes = t.minutes;
+      leg.truck_plan_minutes = plan(t.minutes, i === 0, leg.ny);
+      leg.truckLegal = t.legal;
+      if (t.note) leg.truckNote = t.note;
+      if (t.legal === false) notes.push(`Truck leg ${leg.from} → ${leg.to}: ${t.note}`);
+      else if (t.avoided?.length) notes.push(`Truck leg ${leg.from} → ${leg.to}: ${t.note}`);
+    } catch (e) {
+      notes.push(`Truck route ${leg.from} → ${leg.to}: ${e.message}`);
     }
   }
+  if (truck && !process.env.HERE_API_KEY) notes.push('Truck legs are checked against truck-banned roads (GSP north of Exit 105, NY parkways, Palisades, Merritt, FDR, Pulaski Skyway, Philly Kelly/MLK Dr) but not low bridges: confirm clearances on unfamiliar city routes.');
   const tolls = best.legs.reduce((a, l) => a + (l.tolls || 0), 0);
-  return { available: true, hq: best.hq, legs: best.legs, miles: best.miles, minutes: best.minutes, tolls: Math.round(tolls * 100) / 100, notes };
+  const truckMiles = best.legs.reduce((a, l) => a + (l.truckMiles ?? l.miles), 0);
+  return { available: true, hq: best.hq, legs: best.legs, miles: best.miles, minutes: best.minutes, truck_miles: truckMiles, tolls: Math.round(tolls * 100) / 100, notes };
 }

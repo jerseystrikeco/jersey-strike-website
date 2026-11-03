@@ -80,7 +80,7 @@ export function renderQuoteEmail({ inquiry: q, plan, priced, routes, docNotes = 
 
   const legs = routes?.available
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px">${routes.legs.map((l) =>
-        `<tr><td style="${td}">${esc(l.from)} → ${esc(l.to)}</td><td style="${td};white-space:nowrap">${l.miles} mi · ${l.minutes} min${l.truckMinutes ? `<br><span style="color:#5C574A">truck: ${l.truckMiles} mi · ${l.truckMinutes} min</span>` : ''}</td></tr>`).join('')}</table>`
+        `<tr><td style="${td}">${esc(l.from)} → ${esc(l.to)}</td><td style="${td};white-space:nowrap">${l.miles} mi · ${l.minutes} min${l.truckMinutes ? `<br><span style="color:#5C574A">truck: ${l.truckMiles} mi · ${l.truckMinutes} min${l.truckNote ? ` · ${esc(l.truckNote)}` : ''}</span>` : ''}</td></tr>`).join('')}</table>`
     : '';
 
   const flags = [...(priced.grandfathered ? [priced.grandfathered] : []), ...(plan.red_flags || []), ...priced.warnings];

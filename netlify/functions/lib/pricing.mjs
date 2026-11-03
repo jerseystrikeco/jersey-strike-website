@@ -31,7 +31,7 @@ export const RATES = {
     typicalMin: 15000, // drafts flag full productions under this, don't bump
   },
   vanPerMile: 1, // per van, round trip
-  boxTruckFuelPerRoundTrip: 200, // cap: box trucks bill $1/mi per round trip, up to $200 (short local trips don't burn a full tank)
+  boxTruckFuelPerRoundTrip: 200, // MINIMUM: box trucks bill $1/mi per round trip, at least $200 per round trip (Alyssa, 11/3/26)
   boxTruckFuelPerMile: 1,
   managementPerMile: 1, // U-Haul or client truck we drive
   managementMinClientTruck: 200,
@@ -248,8 +248,8 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
         uhauls.push({ label, ...u });
         costs.push({ what: `${label}: U-Haul (our cost) + fuel`, amount: u.ourCost * (num(v.uhaul_quoted_cost) > 0 ? 1 : 1 + R.uhaul.taxesFeesPct) + u.miles * R.cost.fuelPerMile });
         add('Vehicles', `${label}: rental + mileage`, `${u.chosen.math} (Method ${u.chosen.method}; our cost ${fmt(u.ourCost)})`, u.chosen.amount, { ref: v.id, phase: 'transport', display: `${plural(u.days, 'day')} rental + ${u.miles} mi` });
-        const uf = Math.min(R.boxTruckFuelPerRoundTrip, u.miles / trips * R.boxTruckFuelPerMile);
-        add('Vehicles', `${label}: fuel`, `${plural(trips, 'round trip')} × ${uf < R.boxTruckFuelPerRoundTrip ? `${Math.round(u.miles / trips)} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (max)`}`, trips * uf, { ref: v.id, phase: 'transport' });
+        const uf = Math.max(R.boxTruckFuelPerRoundTrip, u.miles / trips * R.boxTruckFuelPerMile);
+        add('Vehicles', `${label}: fuel`, `${plural(trips, 'round trip')} × ${uf > R.boxTruckFuelPerRoundTrip ? `${Math.round(u.miles / trips)} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (min)`}`, trips * uf, { ref: v.id, phase: 'transport' });
         add('Vehicles', `${label}: U-Haul management`, `${u.miles} mi × ${fmt(R.managementPerMile)}/mi`, u.miles * R.managementPerMile, { ref: v.id, phase: 'transport' });
       }
     } else if (v.kind === 'client_truck') {
@@ -259,8 +259,8 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
         `${plural(trips, 'round trip')} × greater of ${fmt(R.managementMinClientTruck)} or ${rt} mi × ${fmt(R.managementPerMile)}`, per * trips * count, { ref: v.id, phase: 'transport' });
     } else if (v.kind === 'box_truck') {
       costs.push({ what: `${label}: OUR fuel cost (× $0.70/mi)`, amount: rt * trips * count * R.cost.fuelPerMile });
-      const bf = Math.min(R.boxTruckFuelPerRoundTrip, rt * R.boxTruckFuelPerMile);
-      add('Vehicles', `${label}: fuel`, `${plural(trips * count, 'round trip')} × ${bf < R.boxTruckFuelPerRoundTrip ? `${rt} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (max)`}`, trips * count * bf, { ref: v.id, phase: 'transport' });
+      const bf = Math.max(R.boxTruckFuelPerRoundTrip, rt * R.boxTruckFuelPerMile);
+      add('Vehicles', `${label}: fuel`, `${plural(trips * count, 'round trip')} × ${bf > R.boxTruckFuelPerRoundTrip ? `${rt} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (min)`}`, trips * count * bf, { ref: v.id, phase: 'transport' });
       if (!v.js_owned) warnings.push(`"${label}" is a box truck that isn't a U-Haul or the client's. Only fuel is charged; confirm whose truck it is.`);
     }
   }

@@ -6,6 +6,8 @@ import { FORMULA, PAST_JOBS } from './knowledge.generated.mjs';
 import { inventoryText } from './inventory.mjs';
 import { localEventsText } from './local-events.mjs';
 
+import { researchDays, uncovered, researchLocalHappenings } from './local-research.mjs';
+
 const MODEL = () => process.env.ANTHROPIC_MODEL || 'claude-opus-4-5';
 const MAX_INLINE_BYTES = 20 * 1024 * 1024;
 
@@ -167,6 +169,7 @@ A new inquiry came in. Plan a PRELIMINARY quote for the admin team to review. It
 
 How to plan:
 - Build a detailed running timeline for every crew call, portal to portal (crew departs HQ -> ... -> back at HQ), following the install and strike timelines in the pricing formula exactly (15 min early studio arrival, 15-30 min early venue arrival (30-45 min only if parking/dock is hard; never more),  load, drive, unload, setup, backload, flip, truck organized, drive home; strike: early prep, client truck reset, strike, pack + strap, delivery, unload/organize, home).
+- Truck routes: every leg also has truckMiles / truck_plan_minutes, a truck-legal route that stays off roads trucks can't use (Garden State Parkway north of Exit 105, every NY parkway, Palisades Interstate Pkwy, Merritt Pkwy, FDR / Harlem River Dr, Pulaski Skyway, Philadelphia's Kelly/MLK/Lincoln Dr). Any leg driven by a U-Haul or box truck uses truck_plan_minutes in the timeline, and the truck's round_trip_miles = the truck miles (truck_miles for the whole loop). Vans and cars use plan_minutes / miles. If the plan uses a truck, say in logistics_notes which restrictions the truck route avoids; if a leg has truckLegal false, add a red flag to route that leg by hand.
 - Use the drive times and miles provided (they come from Google Maps / truck routing). In the timeline, use each leg's plan_minutes, not the raw minutes (the first leg out of HQ is just rounded up to the quarter hour; every later leg already includes a 15 min buffer); miles stay as given. If none are provided, estimate conservatively and say so in red_flags.
 - Every leg of the timeline is a real drive between two real addresses. Work each one out from the addresses (HQ, client studio, venue, crew homes), never by assuming two places are "close". If the client's studio/pickup address is the same as (or next to) our HQ, then venue -> studio is the same drive as venue -> HQ, and the call ends when the unload at the studio is done (no extra drive home). Departure time = first start time minus (the leg's plan_minutes + the 15-30 min arrival buffer), rounded to the quarter hour, but never less than 1 hr before that start time, and the drive back to HQ is never less than 1 hr either (1 hr minimum each way, from either HQ). Strike timing: when the client gives a hard out, the crew strikes and backloads right up to the hard out ("strike done, van backloaded + organized" = the hard out time, not earlier), then departs about 15 min later. Always show the unload at the drop-off as its own step: arrive, then unload/organize sized to the vehicle and how full it is: about 15 min for a van; 30-60 min for a smaller box truck or U-Haul; up to 1.5 hrs for a full 26 ft box truck (less with a bigger crew or a light load). Then done. Follow the worked strike example in the pricing formula (9:30 depart, 10:15 arrive/prep, 10:30 start, 11:30 done + backloaded, 11:45 depart, 12:45 studio unload, 1:00 done). Don't add separate "prep" time before the start beyond that arrival buffer, and don't add buffers after the last unload: when the last stop is HQ (or the client's studio is at HQ), the call ends when the unload/organize is done.
 - Take the client's answers on the inquiry form as fact (start time, hard out, their staff on site, linens, what comes back, addresses, vehicles). Don't ask them to confirm something they already answered, and don't call it into question, unless it conflicts with another answer or with their documents; then flag the specific conflict. missing_info and client_questions are only for things they did NOT tell us or that conflict. Bad examples (never ask these when the form answered them): "confirm the strike start time", "is the hard out strict?", "will your team be on site?" (Their staff on site: 0 means none), "is everything coming back to your studio?". A document giving a range (e.g. 16-18 tables) is fine: plan for the high end and note it, don't ask.
@@ -189,6 +192,7 @@ How to plan:
 - Premium labor triggers per crew call (premium_reasons): major_holiday = time and a half (Thanksgiving / Black Friday weekend Wed-Sun, the whole Dec 23 - Jan 2 holiday season, July 4; e.g. $97.50/hr), holiday = +$10 (Memorial/Labor Day weekends, Valentine's/Mother's Day weeks for floral work), nyc_difficult (Manhattan/Brooklyn/Queens venues with no dock, street parking/permits, security check-in, freight-elevator or union rules, long carries), short_notice (inquiry < 7 days before the event), extreme_access (ladders over 20 ft, scissor lift, heavy hung structures/grids over a dance floor), difficult_scope (the team will clearly work beyond a reasonable expectation: very heavy/awkward pieces, huge piece counts for the window, many long carries or stairs, multiple flips, punishing conditions). Only for genuinely harder calls; explain each in reasoning. Holidays come ONLY from the DATE CHECK line in the inquiry; never flag a holiday, holiday weekend or holiday traffic it doesn't name. Don't add generic red flags (weather, \"check for conflicts\", \"December night\"); red flags are specific risks to this job.
 - Partial or full productions (the client hands us a whole part of the event: we source the floral/decor, prep it in the studio, deliver, install and strike): set job_type "full_production" and build the job in phases, each its own crew call(s) with its own date and team: sourcing (sourced_items with qty, a per-unit components recipe when you can estimate stems/materials, our cost), studio prep/processing (kind "design", phase "studio", at our studio or theirs), delivery (kind "delivery"), install, strike. Any part can be left out (e.g. we install + strike only one installation they outsourced to us). Don't force a job into "strike only" or "install + strike" when the client is outsourcing more than that.
 - Local events + traffic: the LOCAL EVENTS section lists parades, marathons, tree lightings, NYE, games, concerts, festivals and road closures near the venue or route on the date (from our calendar and from web research). For EACH one that affects the job: add its buffer to every drive leg into or out of the affected area in the timeline (on top of the normal drive buffers and the 1 hr minimum), arrive earlier, and plan the approach around the closures (name the bridge/tunnel/avenue to use or avoid, and where the van can stop to load). Put the closures, parking and loading limits in logistics_notes, add a red flag, list it in assumptions (with what it changes in $), and ask the client about the venue's access plan (security perimeter, loading window, freight elevator, COI). Use nyc_difficult or difficult_scope only when it really makes the crew's work harder. Never invent an event that isn't in that section; if it says nothing was found, don't add event traffic.
+- Parking + loading: if the research finds a film shoot, parking suspension, street fair or another big event at or next to the venue on any crew-call day, plan where the van/truck loads (dock, side street, garage), add 15-30 min for the carry, add a parking line if we'll pay for a garage, and ask the client/venue for the loading plan.
 - Fabrication: if the job needs a custom build, estimate it in "fabrication" (materials cost + shop hours) using past fab jobs as comparables (e.g. metal chuppah $2,800 = $2,200 materials + $600 labor; wooden 8x8 chuppah ~$4,600; standard custom chuppah builds $1,823–3,279; modular arch ~$3,600–3,900; plinth build ~$2,355; 2x6 ft frame $450; 9x4 ft grid $510; chandelier rings $100 each; custom tabletops ~$415 each). Be explicit about confidence, flags and questions for Larry. If Jersey Strike already owns something that fits (wooden chuppah rental $950, arch rental, white plinths $75 each, pole urn + plinth, stage backdrop ~$3,600), suggest renting it instead via additional_rentals.
 - Fabrication, how Alyssa builds a fab quote (learned from her Heart + Soil / Inness 6/12/27 quote, $15,174):
   - Size it from the inspiration photo and the count, never a generic size. Work the math out loud in the description: e.g. 240 guests / 150+ cards, hotel-lobby cubby wall = 1 card per 4in x 4in box, 80 boxes per side = 160 boxes, boxes top out at 6 ft reach, top + bottom trim, arched floral niche in the middle = about 12 ft wide x 8 ft high. Say "dimensions drive this price" and list the dimensions you assumed in check_before_quoting.
@@ -244,29 +248,13 @@ async function fileToBlock(f) {
 // Web research (Anthropic web search tool) for one-off events near the venue on the date: concerts, games, parades,
 // festivals, protests, marathons, construction or bridge/tunnel closures. Returns short notes, or '' if search isn't
 // available (turn web search on in the Anthropic Console: Settings > Privacy/Tools) or nothing turned up.
-export async function researchLocalEvents(inquiry) {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key || process.env.LOCAL_EVENT_RESEARCH === 'off' || !inquiry.venue || !inquiry.eventDate) return { notes: '', error: null };
-  try {
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify({
-        model: process.env.ANTHROPIC_RESEARCH_MODEL || MODEL(),
-        max_tokens: 1500,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
-        messages: [{ role: 'user', content: `An event crew (vans, sometimes a box truck) drives to ${inquiry.venue}${inquiry.studio ? ` (pickup/drop-off at ${inquiry.studio})` : ''} on ${inquiry.eventDate}, usually from Montclair NJ or Forked River NJ.
-Search the web for anything on that date (and the evening before/after) that will snarl traffic, close roads or lock down blocks near the venue or on the likely route: parades, marathons/races, tree lightings, festivals, concerts, sports games, protests, presidential/UN motorcades, bridge or tunnel closures, major construction.
-Answer in at most 6 short bullet lines: "- <event>, <date + hours>, <where / which roads are closed>, <source site>". Only events you actually found for this date. If you find nothing, answer exactly: NONE FOUND.` }],
-      }),
-    });
-    if (!r.ok) return { notes: '', error: `research ${r.status}: ${(await r.text()).slice(0, 160)}` };
-    const msg = await r.json();
-    const text = (msg.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('').trim();
-    return { notes: /NONE FOUND/i.test(text) && text.length < 40 ? 'Nothing found online for this date and area.' : text.slice(0, 2500), error: null };
-  } catch (e) {
-    return { notes: '', error: `research failed: ${e.message}` };
-  }
+export async function researchLocalEvents(inquiry, plan = null, done = []) {
+  if (process.env.LOCAL_EVENT_RESEARCH === 'off' || !inquiry.venue || !inquiry.eventDate) return { notes: '', days: [], error: null };
+  // Every day of the plan: event day, crew calls (multi-day installs, next-day strikes), studio days, travel in / back.
+  const days = uncovered(researchDays(inquiry.eventDate, plan || {}), done);
+  if (!days.length) return { notes: '', days: [], error: null };
+  return researchLocalHappenings({ key: process.env.ANTHROPIC_API_KEY, model: process.env.ANTHROPIC_RESEARCH_MODEL || MODEL(), venue: inquiry.venue, studio: inquiry.studio, days,
+    truck: (inquiry.vehicles || []).some((v) => /truck|u-?haul|ft/i.test(v)) });
 }
 
 export async function planQuote(inquiry, routes, staff = null, research = null) {
