@@ -25,7 +25,7 @@ import { renderQuoteEmail, renderQuoteText, renderFlagsText, quoteSubject } from
 import { triggerSecret } from './lib/trigger.mjs';
 import { subjectFor, inquiryMessageId } from './submission-created.mjs';
 import { proposalPdf, proposalFilename } from './lib/proposal-pdf.mjs';
-import { sendProposalToHub } from './lib/hub.mjs';
+import { sendProposalToHub, fetchCatalog } from './lib/hub.mjs';
 
 // Airtable columns for the draft. Add these to the Inquiries table (see LAUNCH-GUIDE.md).
 const DEFAULT_TABLE = 'tblvthafdL2XhCDZt'; // EVENT INQUIRIES + LEADS (same as submission-created)
@@ -135,26 +135,28 @@ export default async (req) => {
   const v2File = () => proposalFilename(inquiry).replace(/\.pdf$/i, ' - Version 2.pdf');
   const v2args = v2 ? { inquiry, ...result, plan: v2.plan, priced: v2.priced, docNotes: v2.docNotes, model: v2.model, recordUrl } : null;
   // Client-ready proposal PDF (Trellis layout) for the admin team to review/forward.
+  // Every proposal ends with our services + rental catalog pages (from the hub; skipped if it can't be reached).
+  const catalog = await fetchCatalog();
   let attachments; let pdfBytes = null; let pdf2 = null;
   try {
-    const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced });
+    const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced, catalog });
     pdfBytes = pdf;
     attachments = [{ filename: proposalFilename(inquiry), content: pdf.toString('base64') }];
   } catch (e) {
     console.error('[quote] proposal PDF failed:', e.message);
   }
-  if (v2) pdf2 = await proposalPdf({ inquiry, plan: v2.plan, priced: v2.priced }).catch((e) => { console.error('[quote] Version 2 PDF failed:', e.message); return null; });
+  if (v2) pdf2 = await proposalPdf({ inquiry, plan: v2.plan, priced: v2.priced, catalog }).catch((e) => { console.error('[quote] Version 2 PDF failed:', e.message); return null; });
   const steps = await Promise.allSettled([
     // Threaded under the original inquiry email (internal only: no client address anywhere).
     sendEmail({ subject: `Re: ${subjectFor(inquiry)}`, html: renderQuoteEmail(args), text: `${quoteSubject(inquiry, result.priced)}\n\n` + renderQuoteText(args) + '\n\n' + renderFlagsText(args),
       headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments }),
     recordId ? updateAirtable(recordId, args) : Promise.reject(new Error('no Airtable record id (Phase 1 save failed)')),
     // The same draft PDF + total on the lead in the hub (the total is owner-only there).
-    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId, plan: result.plan }) : Promise.reject(new Error('no proposal PDF')),
+    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId, plan: result.plan, catalogIncluded: !!catalog }) : Promise.reject(new Error('no proposal PDF')),
     // Version 2 (planned around local happenings): its own email in the same thread + its own draft on the lead.
     v2 ? sendEmail({ subject: `Re: ${subjectFor(inquiry)} · Version 2 (planned around local happenings)`, html: renderQuoteEmail(v2args), text: `${quoteSubject(inquiry, v2.priced)} · Version 2\n\n` + renderQuoteText(v2args) + '\n\n' + renderFlagsText(v2args),
       headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments: pdf2 ? [{ filename: v2File(), content: pdf2.toString('base64') }] : undefined }) : Promise.resolve('no version 2'),
-    v2 && pdf2 ? sendProposalToHub(inquiry, { pdf: pdf2, filename: v2File(), total: v2.priced.total, leadId: hubLeadId, plan: v2.plan, version: 2 }) : Promise.resolve('no version 2'),
+    v2 && pdf2 ? sendProposalToHub(inquiry, { pdf: pdf2, filename: v2File(), total: v2.priced.total, leadId: hubLeadId, plan: v2.plan, version: 2, catalogIncluded: !!catalog }) : Promise.resolve('no version 2'),
   ]);
   steps.forEach((r, i) => {
     const step = ['email', 'airtable', 'hub', 'email v2', 'hub v2'][i];

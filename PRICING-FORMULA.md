@@ -166,7 +166,7 @@ This is a preliminary estimate based on the information provided. Additional hou
 - Reference job: past-jobs/2026-10-24-wile-jamie-greg.md
 
 ## Quote layout (match the existing proposal template)
-Event header (dates, venues, addresses, florist + contact) → TIMELINE per day/shift with team size and roles → TASK LIST / scope → QUOTE BREAKDOWN line items (team, hours × rate) → Subtotal → Base Service → Admin Fee → Total → scope-change footer. Retainer 15% via Dubsado.
+Event header (dates, venues, addresses, florist + contact) → TIMELINE per day/shift with team size and roles → TASK LIST / scope → QUOTE BREAKDOWN line items (team, hours × rate) → Subtotal → Base Service → Admin Fee → Total → scope-change footer. Retainer 15% via Dubsado. → then (every proposal) an OUR SERVICES page and the RENTAL CATALOG pages (photo, size, rental price per piece), pulled from the hub (Settings → Proposal pages, Library → Inventory). The website drafts add them automatically; for a proposal built anywhere else, download them from hub Settings → "Download services + rental catalog (PDF)" and add them to the end.
 
 ## Defaults until told otherwise
 - Overtime / late night: no surcharge (late strikes are already priced through the $65 rate and base fee)
