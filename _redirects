@@ -1,0 +1,13 @@
+# Old Showit pages -> new pages (keeps Google results and old links working)
+/staffing-solutions      /staffing/     301
+/staffing-solutions/     /staffing/     301
+/fabrication-solutions   /fabrication/  301
+/fabrication-solutions/  /fabrication/  301
+/rental-solutions        /rentals/      301
+/rental-solutions/       /rentals/      301
+/contact                 /inquire/      301
+/contact/                /inquire/      301
+
+# Holiday program site
+/holiday                 https://holiday.jerseystrike.com   301
+/holiday/                https://holiday.jerseystrike.com   301
