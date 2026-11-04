@@ -52,3 +52,6 @@ form.is-stepped .q-later{display:none !important}
 [style*="Bodoni Moda"], .legal h2 { font-variation-settings: "opsz" 12; }
 h1[style*="Bodoni Moda"], h2[style*="Bodoni Moda"], h3[style*="Bodoni Moda"], .legal h2 { font-weight: 600 !important; }
 h1[style*="Bodoni Moda"] em, h2[style*="Bodoni Moda"] em, h3[style*="Bodoni Moda"] em { font-weight: inherit !important; }
+
+/* Holiday banner: desktop and tablet only */
+@media (max-width: 640px) { .seasonal-banner { display: none !important; } }
