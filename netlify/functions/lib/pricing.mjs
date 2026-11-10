@@ -263,7 +263,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
         uhauls.push({ label, ...u });
         costs.push({ what: `${label}: U-Haul (our cost) + fuel`, amount: u.ourCost * (num(v.uhaul_quoted_cost) > 0 ? 1 : 1 + R.uhaul.taxesFeesPct) + u.miles * R.cost.fuelPerMile });
         const vk = count > 1 ? `${v.id}#${i + 1}` : v.id;
-        add('Vehicles', `${label}: rental + mileage`, `${u.chosen.math} (Method ${u.chosen.method}; our cost ${fmt(u.ourCost)})`, u.chosen.amount, { ref: v.id, key: `${vk}:rental`, phase: 'transport', display: `${plural(u.days, 'day')} rental + ${u.miles} mi`,
+        add('Vehicles', `${label}: rental + mileage`, `${u.chosen.math} (Method ${u.chosen.method}; our cost ${fmt(u.ourCost)})`, u.chosen.amount, { ref: v.id, key: `${vk}:rental`, phase: 'transport', display: v.description || `${plural(u.days, 'day')} rental + ${u.miles} mi`,
           recipe: [{ k: 'Rental days', v: `${u.days} (${UR.minDays}-day minimum: pick up the day before, return the day after)` }, { k: 'Miles', v: `${u.miles} mi${num(v.uhaul_miles) > 0 ? ' (typed)' : ` (${rt} mi × ${plural(trips, 'trip')})`}` },
             { k: 'Our U-Haul cost', v: u.costMath, cost: true },
             { k: 'Method A · Trellis rate', v: `${u.a.math} = ${fmt(u.a.amount)}`, rate: 'uhaul.billPerDay' },
