@@ -228,7 +228,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     if (!sOpt) personHrs += team * hrs;
     add('Labor', [s.label, s.date].filter(Boolean).join(' | '),
       `Team of ${team} × ${hrs} hrs × ${fmt(rate)}/hr (${s.depart_hq} → ${s.back_hq} portal to portal)${triggers.length && grand == null ? `; premium: ${triggers.join(' + ').replace(/_/g, ' ')}` : ''}`,
-      team * hrs * rate, { optional: sOpt, hours: hrs, team, rate, roles: s.roles || '', ref: s.id, phase: s.phase || phaseOfKind(kind),
+      team * hrs * rate, { optional: sOpt, date: s.date || '', hours: hrs, team, rate, roles: s.roles || '', ref: s.id, phase: s.phase || phaseOfKind(kind),
         recipe: [{ k: 'Team', v: `${team} people` }, { k: 'Hours, portal to portal', v: `${s.depart_hq} → ${s.back_hq} = ${hrs} hrs` },
           { k: 'Rate', v: `${fmt(rate)}/hr${num(s.rate_override) > 0 ? ' (typed on this call)' : grand != null ? ` (${g.name} deal)` : triggers.length ? ` (${fmt(R.laborPerHour)} + premium: ${triggers.join(', ').replace(/_/g, ' ')})` : ov.laborPerHour != null ? ' (this quote’s rate)' : ' (standard)'}` },
           { k: 'Price', v: `${team} × ${hrs} × ${fmt(rate)} = ${fmt(team * hrs * rate)}` },
@@ -239,7 +239,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     const p = Math.max(0, Math.round(num(d.people)));
     if (!d.optional) costs.push({ what: `${d.label || 'Studio day'}: ${p} × ${R.cost.studioDayHrs} hrs × ${fmt(R.cost.teamPay)}`, amount: p * R.cost.studioDayHrs * R.cost.teamPay });
     add('Labor', [d.label || 'Studio day', d.date].filter(Boolean).join(' | '),
-      `${p} × ${fmt(R.studioDayPerPerson)} flat per person`, p * R.studioDayPerPerson, { optional: !!d.optional, ref: d.id, phase: d.phase || 'studio',
+      `${p} × ${fmt(R.studioDayPerPerson)} flat per person`, p * R.studioDayPerPerson, { optional: !!d.optional, date: d.date || '', ref: d.id, phase: d.phase || 'studio',
       recipe: [{ k: 'People', v: p }, { k: 'Flat per person per day', v: fmt(R.studioDayPerPerson), rate: 'studioDayPerPerson' }, { k: 'Our cost', v: `${p} × ${R.cost.studioDayHrs} hrs × ${fmt(R.cost.teamPay)}`, cost: true }], display: `${plural(p, 'person')} × ${fmt(R.studioDayPerPerson)} studio day` });
   }
 
@@ -503,7 +503,36 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     }
     o.admin = round2(o.total * adminPct); o.total = round2(o.total + o.admin);
   }
+  // How the proposal groups its lines (plan.present, picked in the quote editor):
+  //   ''            items first, then a LABOR heading (the standard Jersey Strike layout)
+  //   'build_labor' Design + build (materials, fabrication, sourcing) | Labor + logistics (day-of crew, vehicles, gear, travel)
+  //   'type'        Design + build, then one heading per kind of work (Delivery, Install, Strike, Vehicles…)
+  //   'day'         Design + build, then one heading per date (with the day's name, e.g. "Load-in"), then Logistics
+  const LAB = new Set(['Labor', 'Vehicles', 'Equipment', 'Travel']);
+  let groups = null;
+  if (plan.present) {
+    const build = lines.filter((l) => !LAB.has(l.section)); const rest = lines.filter((l) => LAB.has(l.section));
+    groups = [];
+    if (build.length) groups.push({ title: 'Design + build', lines: build });
+    if (plan.present === 'type') {
+      for (const [k, lab] of PHASES) { const ls = rest.filter((l) => l.phase === k); if (ls.length) groups.push({ title: lab, lines: ls }); }
+      const left = rest.filter((l) => !PHASES.some(([k]) => k === l.phase)); if (left.length) groups.push({ title: 'Other', lines: left });
+    } else if (plan.present === 'day') {
+      const ev = String(plan.event_date || inquiry.event_date || inquiry.eventDate || '').match(/^\d{2}(\d{2})-(\d{2})-(\d{2})$/);
+      const evShort = ev ? `${+ev[2]}/${+ev[3]}/${ev[1]}` : '';
+      const pd = (d) => { const m = String(d || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? new Date(Number(m[3].length === 2 ? `20${m[3]}` : m[3]), Number(m[1]) - 1, Number(m[2])) : null; };
+      const byDay = new Map(); const logi = [];
+      for (const l of rest) { const d = l.section === 'Labor' ? (l.date || evShort) : ''; if (d) { if (!byDay.has(d)) byDay.set(d, []); byDay.get(d).push(l); } else logi.push(l); }
+      const names = plan.day_names || {};
+      [...byDay.entries()].sort((a, b) => (pd(a[0])?.getTime() || 9e15) - (pd(b[0])?.getTime() || 9e15)).forEach(([d, ls]) => {
+        const x = pd(d); groups.push({ title: [x ? x.toLocaleDateString('en-US', { weekday: 'long', month: 'numeric', day: 'numeric', year: '2-digit' }).replace(',', '') : d, names[d]].filter(Boolean).join(' · '), lines: ls });
+      });
+      if (logi.length) groups.push({ title: 'Logistics', lines: logi });
+    } else groups.push({ title: 'Labor + logistics', lines: rest });
+    groups = groups.filter((g) => g.lines.length).map((g) => ({ ...g, total: round2(g.lines.reduce((a, l) => a + l.amount, 0)) }));
+  }
   return {
+    groups,
     optionalLines: optionals,
     optional: optBlocks,
     lines, charges, baseFee, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null, localEvents: events,

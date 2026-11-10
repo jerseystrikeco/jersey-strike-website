@@ -3,8 +3,6 @@
 // admin team to review and forward. Never sent to clients automatically.
 import PDFDocument from 'pdfkit';
 import { LOGO_PNG_BASE64 } from './logo.generated.mjs';
-import { DEFAULT_SERVICES, parseServices } from './proposal-services.mjs';
-export { DEFAULT_SERVICES, parseServices };
 
 const money = (n) => (Math.round(n * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const longDate = (iso) => {
@@ -43,15 +41,6 @@ const BEST = [
   "TAKE PHOTOS + VIDEOS OF YOUR EVENT PRODUCTION SET UP (AND LOADING DETAILS) SO YOU CAN SEND THEM OVER TO OUR BREAKDOWN TEAM. THIS SHOWS THEM HOW MECHANICS ARE PUT TOGETHER AND ALLOWS OUR TEAM TO ARRIVE PREPARED (TOOLING, HAND-TRUCKS + DOLLIES, PROPER VEHICLE SIZING IF THERE'S LAST MINUTE CHANGES, ETC).",
 ];
 
-// One short spec line for a rental: the first description line that isn't just the name (sizes, finish).
-export function rentalSpec(item) {
-  const lines = String(item.description || '').split('\n').map((x) => x.trim()).filter(Boolean);
-  const low = (x) => x.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const ok = lines.filter((x) => low(x) !== low(item.name) && !/^(specifications|rental details|designed for)/i.test(x) && !/\$|rental|deliver|pickup/i.test(x));
-  const l = ok.find((x) => /\d\s*(?:ft|in|['’"”]|x\b)|\bx\s*\d/i.test(x)) || ok[0] || '';
-  return l.length > 80 ? `${l.slice(0, 77)}…` : l;
-}
-
 // Labor lines read like our Trellis items: the call's timeline, then the team, any ladders/kit included in the price,
 // the rate and the hours. A call with its own proposal text (typed in the hub's quote editor) prints that instead.
 function itemLines(l) {
@@ -76,10 +65,8 @@ export function proposalFilename(q) {
 
 // Returns Promise<Buffer>.
 // images: optional { [photo path]: Buffer } for item photos (the hub passes them in; PNG or JPEG).
-// only: 'catalog' = just the services + rental catalog pages (to attach to a proposal made elsewhere: a Trellis
-// export, a PDF a teammate edited in Claude). services: false = the rental catalog alone (e.g. for GITP proposals).
-export function proposalPdf({ inquiry: q = {}, plan = {}, priced = null, created = new Date(), images = {}, catalog = null, only = '', services = true }) {
-  const title = only ? 'Jersey Strike Co. · Our services + rental catalog' : `${shortDate(q.eventDate)} | ${q.business || q.contact} | ${(q.venue || '').split(',')[0]}`;
+export function proposalPdf({ inquiry: q, plan, priced, created = new Date(), images = {} }) {
+  const title = `${shortDate(q.eventDate)} | ${q.business || q.contact} | ${(q.venue || '').split(',')[0]}`;
   const doc = new PDFDocument({ size: 'LETTER', margins: { top: 34, bottom: 60, left: 50, right: 50 }, bufferPages: true, info: { Title: title, Author: 'Jersey Strike Co' } });
   // Built-in Helvetica only has WinAnsi characters: swap the arrows/symbols Claude likes to use.
   const WIN = { '↔': '<->', '→': '->', '←': '<-', '≈': '~', '≥': '>=', '≤': '<=', '✓': 'OK', '−': '-' };
@@ -106,9 +93,6 @@ export function proposalPdf({ inquiry: q = {}, plan = {}, priced = null, created
   const ensure = (h) => { if (doc.y + h > BOTTOM) { doc.addPage(); doc.x = L; doc.y = 50; } };
   const softRule = (w = CW * 0.68, color = '#e6e6e6') => { const y = doc.y; doc.moveTo(L + (CW - w) / 2, y).lineTo(L + (CW + w) / 2, y).lineWidth(0.6).strokeColor(color).stroke(); };
 
-  let fresh = !!only; // the first page of a catalog-only PDF is already open
-  const nextPage = () => { if (fresh) { fresh = false; header(); return; } doc.addPage(); header(); };
-  if (!only) {
   // 1. Cover
   header();
   doc.y += 70;
@@ -178,8 +162,12 @@ export function proposalPdf({ inquiry: q = {}, plan = {}, priced = null, created
   doc.fontSize(11.5);
   const LABORISH = new Set(['Labor', 'Vehicles', 'Equipment', 'Travel']);
   let seenItems = false, laborHead = false;
-  for (const l of priced.lines) {
-    if (!LABORISH.has(l.section)) seenItems = true;
+  // Grouped proposals (plan.present): a heading before each group's first line, e.g. DESIGN + BUILD, SATURDAY 6/12/27 · LOAD-IN
+  const headAt = new Map((priced.groups || []).map((g) => [g.lines[0], g]));
+  for (const l of (priced.groups ? priced.groups.flatMap((g) => g.lines) : priced.lines)) {
+    const grp = headAt.get(l);
+    if (priced.groups) { if (grp) { ensure(70 + itemLines(l).length * 15); doc.moveDown(0.6); doc.font(FB).fontSize(15).text(grp.title.toUpperCase(), L, doc.y, { width: CW }); doc.moveDown(0.9); doc.fontSize(11.5); } }
+    else if (!LABORISH.has(l.section)) seenItems = true;
     else if (seenItems && !laborHead) { laborHead = true; ensure(70 + itemLines(l).length * 15); doc.moveDown(0.6); doc.font(FB).fontSize(17).text('LABOR', L, doc.y); doc.moveDown(1); doc.fontSize(11.5); }
     const desc = itemLines(l);
     const pics = (l.photos || []).map((ph) => images[ph.path || ph]).filter(Boolean).slice(0, 3);
@@ -253,46 +241,6 @@ export function proposalPdf({ inquiry: q = {}, plan = {}, priced = null, created
   doc.moveDown(1.2); ensure(50);
   doc.font(F).fontSize(10).text('*This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.', IT, doc.y, { width: ITW, lineGap: 1.5 });
 
-  }
-
-  // Our services + the rental catalog: in every proposal, so they keep what we do in their pocket.
-  if (catalog && !plan.hide_catalog && services) {
-    nextPage();
-    doc.font(FB).fontSize(12.5).text('OUR SERVICES', L, doc.y); doc.moveDown(0.3);
-    doc.font(FI).fontSize(10.5).fillColor(GREY).text('Keep this page handy: everything our crew can take off your plate.', L, doc.y, { width: CW }); doc.fillColor('#111'); doc.moveDown(0.9);
-    for (const [t, d] of catalog.services || DEFAULT_SERVICES) {
-      ensure(40);
-      doc.font(FB).fontSize(11.5).text(t, L, doc.y, { width: CW });
-      if (d) doc.font(F).fontSize(10.5).text(d, L, doc.y, { width: CW, lineGap: 2 });
-      doc.moveDown(0.7);
-    }
-  }
-  if (catalog && !plan.hide_catalog) {
-    const items = catalog.rentals || [];
-    if (items.length) {
-      const COLS = 3, GAP = 18, cw = (CW - GAP * (COLS - 1)) / COLS, IMG = 100, CH = IMG + 68;
-      let i = 0;
-      const page = () => { nextPage(); doc.font(FB).fontSize(12.5).text(i ? 'RENTAL CATALOG (CONTINUED)' : 'RENTAL CATALOG', L, doc.y); doc.moveDown(0.3);
-        if (!i) { doc.font(FI).fontSize(10.5).fillColor(GREY).text('Pieces we own and rent out. Ask us to add any of them to your quote. Weekly rental window; delivery + pickup ride along with your crew call.', L, doc.y, { width: CW }); doc.fillColor('#111'); }
-        doc.moveDown(0.9); };
-      page();
-      let y = doc.y;
-      for (; i < items.length; i += 1) {
-        const col = i % COLS;
-        if (col === 0 && i > 0) y += CH;
-        if (col === 0 && y + CH > BOTTOM) { page(); y = doc.y; }
-        const it = items[i]; const x = L + col * (cw + GAP);
-        if (it.img) { try { doc.image(it.img, x, y, { fit: [cw, IMG], align: 'center', valign: 'center' }); } catch { /* skip an unreadable photo */ } }
-        else { doc.rect(x, y, cw, IMG).lineWidth(0.6).strokeColor('#e2dcc8').stroke(); }
-        doc.font(FB).fontSize(10.5).fillColor('#111').text(it.name, x, y + IMG + 8, { width: cw, height: 28, ellipsis: true });
-        if (it.spec) doc.font(F).fontSize(9).fillColor(GREY).text(it.spec, x, doc.y, { width: cw, height: 24, ellipsis: true });
-        doc.font(F).fontSize(9.5).fillColor('#111').text(it.price ? `$${money(it.price).replace(/\.00$/, '')} · ${it.unit || 'weekly rental'}` : 'Ask us for pricing', x, doc.y + 1, { width: cw });
-      }
-      doc.x = L; doc.y = y + CH;
-    }
-  }
-
-  if (!only) {
   // What happens next
   doc.addPage(); header();
   doc.font(FB).fontSize(12.5).text('WHAT HAPPENS NEXT?', L, doc.y); doc.moveDown(0.9);
@@ -302,8 +250,6 @@ export function proposalPdf({ inquiry: q = {}, plan = {}, priced = null, created
   doc.addPage(); header();
   doc.font(FB).fontSize(12.5).text('BEST PRACTICES:', L, doc.y); doc.moveDown(0.9);
   doc.font(F).fontSize(10.5).list(BEST, L + 14, doc.y, { width: CW - 20, lineGap: 3, bulletRadius: 2, paragraphGap: 14 });
-
-  }
 
   // Footers
   const c2 = created.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', timeZone: 'America/New_York' });
