@@ -223,11 +223,12 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     if (num(s.rate_override) > 0) rate = num(s.rate_override); // a rate typed on this call in the quote editor wins
     const team = Math.max(0, Math.round(num(s.team_size)));
     const payRate = major && grand == null ? R.cost.holidayPay : R.cost.teamPay;
-    costs.push({ what: `${s.label}: ${team} × (${hrs} + ${R.cost.homeDriveHrs} home drive) hrs × ${fmt(payRate)}`, amount: team * (hrs + R.cost.homeDriveHrs) * payRate, kind: 'labor', shift: si, team, hrs, payRate, holiday: major && grand == null });
-    personHrs += team * hrs;
+    const sOpt = !!s.optional; // optional crew call: priced "for consideration", not in the total, cost or hours
+    if (!sOpt) costs.push({ what: `${s.label}: ${team} × (${hrs} + ${R.cost.homeDriveHrs} home drive) hrs × ${fmt(payRate)}`, amount: team * (hrs + R.cost.homeDriveHrs) * payRate, kind: 'labor', shift: si, team, hrs, payRate, holiday: major && grand == null });
+    if (!sOpt) personHrs += team * hrs;
     add('Labor', [s.label, s.date].filter(Boolean).join(' | '),
       `Team of ${team} × ${hrs} hrs × ${fmt(rate)}/hr (${s.depart_hq} → ${s.back_hq} portal to portal)${triggers.length && grand == null ? `; premium: ${triggers.join(' + ').replace(/_/g, ' ')}` : ''}`,
-      team * hrs * rate, { hours: hrs, team, rate, roles: s.roles || '', ref: s.id, phase: s.phase || phaseOfKind(kind),
+      team * hrs * rate, { optional: sOpt, hours: hrs, team, rate, roles: s.roles || '', ref: s.id, phase: s.phase || phaseOfKind(kind),
         recipe: [{ k: 'Team', v: `${team} people` }, { k: 'Hours, portal to portal', v: `${s.depart_hq} → ${s.back_hq} = ${hrs} hrs` },
           { k: 'Rate', v: `${fmt(rate)}/hr${num(s.rate_override) > 0 ? ' (typed on this call)' : grand != null ? ` (${g.name} deal)` : triggers.length ? ` (${fmt(R.laborPerHour)} + premium: ${triggers.join(', ').replace(/_/g, ' ')})` : ov.laborPerHour != null ? ' (this quote’s rate)' : ' (standard)'}` },
           { k: 'Price', v: `${team} × ${hrs} × ${fmt(rate)} = ${fmt(team * hrs * rate)}` },
@@ -236,22 +237,24 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   }
   for (const d of plan.studio_days || []) {
     const p = Math.max(0, Math.round(num(d.people)));
-    costs.push({ what: `${d.label || 'Studio day'}: ${p} × ${R.cost.studioDayHrs} hrs × ${fmt(R.cost.teamPay)}`, amount: p * R.cost.studioDayHrs * R.cost.teamPay });
+    if (!d.optional) costs.push({ what: `${d.label || 'Studio day'}: ${p} × ${R.cost.studioDayHrs} hrs × ${fmt(R.cost.teamPay)}`, amount: p * R.cost.studioDayHrs * R.cost.teamPay });
     add('Labor', [d.label || 'Studio day', d.date].filter(Boolean).join(' | '),
-      `${p} × ${fmt(R.studioDayPerPerson)} flat per person`, p * R.studioDayPerPerson, { ref: d.id, phase: d.phase || 'studio',
+      `${p} × ${fmt(R.studioDayPerPerson)} flat per person`, p * R.studioDayPerPerson, { optional: !!d.optional, ref: d.id, phase: d.phase || 'studio',
       recipe: [{ k: 'People', v: p }, { k: 'Flat per person per day', v: fmt(R.studioDayPerPerson), rate: 'studioDayPerPerson' }, { k: 'Our cost', v: `${p} × ${R.cost.studioDayHrs} hrs × ${fmt(R.cost.teamPay)}`, cost: true }], display: `${plural(p, 'person')} × ${fmt(R.studioDayPerPerson)} studio day` });
   }
 
   // Vehicles
+  let truckGroup = null; // the first U-Haul's one-line group (the job's tolls fold into it)
   for (const v of plan.vehicles || []) {
     const count = v.kind === 'van' && v.js_van === 'both' ? Math.max(2, Math.round(num(v.count, 2))) : Math.max(1, Math.round(num(v.count, 1)));
     const trips = Math.max(1, Math.round(num(v.trips, 1)));
     const rt = Math.max(0, Math.round(num(v.round_trip_miles)));
     const label = v.label || v.kind;
+    const vOpt = !!v.optional; const vcost = (c) => { if (!vOpt) costs.push(c); }; // optional vehicle: priced, not in the total
     if (v.kind === 'van') {
       const miles = rt * trips * count;
-      costs.push({ what: `${label}: OUR fuel cost, ${miles} mi × $0.70 (client is billed $1/mi above)`, amount: miles * R.cost.fuelPerMile });
-      add('Vehicles', label, `${plural(count, 'van')} × ${rt} mi round trip × ${plural(trips, 'trip')} × ${fmt(R.vanPerMile)}/mi`, miles * R.vanPerMile, { ref: v.id, key: `${v.id}:van`, phase: 'transport',
+      vcost({ what: `${label}: OUR fuel cost, ${miles} mi × $0.70 (client is billed $1/mi above)`, amount: miles * R.cost.fuelPerMile });
+      add('Vehicles', label, `${plural(count, 'van')} × ${rt} mi round trip × ${plural(trips, 'trip')} × ${fmt(R.vanPerMile)}/mi`, miles * R.vanPerMile, { optional: vOpt, ref: v.id, key: `${v.id}:van`, phase: 'transport',
         recipe: [{ k: 'Vans', v: count }, { k: 'Miles per round trip', v: `${rt} mi` }, { k: 'Round trips', v: trips }, { k: 'Fuel charge', v: `${fmt(R.vanPerMile)}/mi per van, no minimum`, rate: 'vanPerMile' },
           { k: 'Price', v: `${count} × ${rt} × ${trips} × ${fmt(R.vanPerMile)} = ${fmt(miles * R.vanPerMile)}` }, { k: 'Our fuel cost', v: `${miles} mi × ${fmt(R.cost.fuelPerMile)}`, cost: true }],
         display: [v.description || `JS vehicle use${trips > 1 ? ` (${plural(trips, 'trip')})` : ''}${count > 1 ? `, ${plural(count, 'van')}` : ''}`, `Approx ${miles} miles round trip`, '', `${fmt(R.vanPerMile).replace('.00', '')}/mile`].join('\n') });
@@ -261,9 +264,12 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
         const UR = { ...R.uhaul, ...Object.fromEntries(Object.entries(v.uhaul_rates || {}).filter(([, x]) => x !== '' && x != null && Number.isFinite(Number(x))).map(([k, x]) => [k, Number(x)])) };
         const u = priceUhaul({ days: v.rental_days, miles, quotedCost: v.uhaul_quoted_cost, method: v.uhaul_method }, UR);
         uhauls.push({ label, ...u });
-        costs.push({ what: `${label}: U-Haul (our cost) + fuel`, amount: u.ourCost * (num(v.uhaul_quoted_cost) > 0 ? 1 : 1 + R.uhaul.taxesFeesPct) + u.miles * R.cost.fuelPerMile });
+        vcost({ what: `${label}: U-Haul (our cost) + fuel`, amount: u.ourCost * (num(v.uhaul_quoted_cost) > 0 ? 1 : 1 + R.uhaul.taxesFeesPct) + u.miles * R.cost.fuelPerMile });
         const vk = count > 1 ? `${v.id}#${i + 1}` : v.id;
-        add('Vehicles', `${label}: rental + mileage`, `${u.chosen.math} (Method ${u.chosen.method}; our cost ${fmt(u.ourCost)})`, u.chosen.amount, { ref: v.id, key: `${vk}:rental`, phase: 'transport', display: v.description || `${plural(u.days, 'day')} rental + ${u.miles} mi`,
+        // One line per truck on the proposal (rental + fuel + management, + tolls); v.itemize prints the parts separately.
+        const grp = (partName) => (v.itemize ? {} : { group: vk, groupLabel: count > 1 ? `${label} #${i + 1}` : label, partName });
+        if (!v.itemize && !vOpt && !truckGroup) truckGroup = vk;
+        add('Vehicles', `${label}: rental + mileage`, `${u.chosen.math} (Method ${u.chosen.method}; our cost ${fmt(u.ourCost)})`, u.chosen.amount, { optional: vOpt, ref: v.id, key: `${vk}:rental`, phase: 'transport', ...grp('Rental + mileage'), display: v.description || (v.itemize ? `${plural(u.days, 'day')} rental + ${u.miles} mi` : `${plural(u.days, 'day')} rental, ${u.miles} mi, fuel + truck management${num(plan.travel?.tolls) > 0 && truckGroup === vk ? ' + tolls' : ''}`),
           recipe: [{ k: 'Rental days', v: `${u.days} (${UR.minDays}-day minimum: pick up the day before, return the day after)` }, { k: 'Miles', v: `${u.miles} mi${num(v.uhaul_miles) > 0 ? ' (typed)' : ` (${rt} mi × ${plural(trips, 'trip')})`}` },
             { k: 'Our U-Haul cost', v: u.costMath, cost: true },
             { k: 'Method A · Trellis rate', v: `${u.a.math} = ${fmt(u.a.amount)}`, rate: 'uhaul.billPerDay' },
@@ -272,25 +278,25 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
             { k: 'Used', v: `Method ${u.chosen.method}: ${fmt(u.chosen.amount)}. ${u.why}` }] });
         const fpm = num(v.fuel_per_mile) > 0 ? num(v.fuel_per_mile) : R.boxTruckFuelPerMile; const fmin = v.fuel_min !== undefined && v.fuel_min !== '' && Number.isFinite(Number(v.fuel_min)) ? Number(v.fuel_min) : R.boxTruckFuelPerRoundTrip;
         const uf = Math.max(fmin, u.miles / trips * fpm);
-        add('Vehicles', `${label}: fuel`, `${plural(trips, 'round trip')} × ${uf > fmin ? `${Math.round(u.miles / trips)} mi × ${fmt(fpm)}` : `${fmt(fmin)} (min)`}`, trips * uf, { ref: v.id, key: `${vk}:fuel`, phase: 'transport',
+        add('Vehicles', `${label}: fuel`, `${plural(trips, 'round trip')} × ${uf > fmin ? `${Math.round(u.miles / trips)} mi × ${fmt(fpm)}` : `${fmt(fmin)} (min)`}`, trips * uf, { optional: vOpt, ref: v.id, key: `${vk}:fuel`, phase: 'transport', ...grp('Fuel'),
           recipe: [{ k: 'Round trips', v: trips }, { k: 'Miles per round trip', v: `${Math.round(u.miles / trips)} mi` }, { k: 'Fuel charge', v: `${fmt(fpm)}/mi${num(v.fuel_per_mile) > 0 ? ' (this truck)' : ''}`, rate: 'boxTruckFuelPerMile' },
             { k: 'Minimum per round trip', v: `${fmt(fmin)}${fmin !== R.boxTruckFuelPerRoundTrip ? ' (this truck)' : ''}`, rate: 'boxTruckFuelPerRoundTrip' }, { k: 'Price', v: `${trips} × greater of ${fmt(fmin)} or ${Math.round(u.miles / trips)} × ${fmt(fpm)} = ${fmt(trips * uf)}` },
             { k: 'Our fuel cost', v: `${u.miles} mi × ${fmt(R.cost.fuelPerMile)}`, cost: true }] });
         const mpm = num(v.mgmt_per_mile) > 0 ? num(v.mgmt_per_mile) : R.managementPerMile;
-        add('Vehicles', `${label}: U-Haul management`, `${u.miles} mi × ${fmt(mpm)}/mi`, u.miles * mpm, { ref: v.id, key: `${vk}:mgmt`, phase: 'transport',
+        add('Vehicles', `${label}: U-Haul management`, `${u.miles} mi × ${fmt(mpm)}/mi`, u.miles * mpm, { optional: vOpt, ref: v.id, key: `${vk}:mgmt`, phase: 'transport', ...grp('Truck management'),
           recipe: [{ k: 'Miles', v: `${u.miles} mi` }, { k: 'Management (pick up, return, our driver’s responsibility)', v: `${fmt(mpm)}/mi${num(v.mgmt_per_mile) > 0 ? ' (this truck)' : ''}`, rate: 'managementPerMile' }, { k: 'Price', v: `${u.miles} × ${fmt(mpm)} = ${fmt(u.miles * mpm)}` }] });
       }
     } else if (v.kind === 'client_truck') {
       const per = Math.max(R.managementMinClientTruck, rt * R.managementPerMile);
       // driver is already paid on the crew call; no extra vehicle cost
       add('Vehicles', `${label}: truck management (driving client's truck)`,
-        `${plural(trips, 'round trip')} × greater of ${fmt(R.managementMinClientTruck)} or ${rt} mi × ${fmt(R.managementPerMile)}`, per * trips * count, { ref: v.id, key: `${v.id}:mgmt`, phase: 'transport',
+        `${plural(trips, 'round trip')} × greater of ${fmt(R.managementMinClientTruck)} or ${rt} mi × ${fmt(R.managementPerMile)}`, per * trips * count, { optional: vOpt, ref: v.id, key: `${v.id}:mgmt`, phase: 'transport',
         recipe: [{ k: 'Round trips', v: trips }, { k: 'Miles per round trip', v: `${rt} mi` }, { k: 'Management', v: `${fmt(R.managementPerMile)}/mi`, rate: 'managementPerMile' }, { k: 'Minimum per round trip', v: fmt(R.managementMinClientTruck), rate: 'managementMinClientTruck' },
           { k: 'Price', v: `${trips} × greater of ${fmt(R.managementMinClientTruck)} or ${rt} × ${fmt(R.managementPerMile)} = ${fmt(per * trips * count)}` }] });
     } else if (v.kind === 'box_truck') {
-      costs.push({ what: `${label}: OUR fuel cost (× $0.70/mi)`, amount: rt * trips * count * R.cost.fuelPerMile });
+      vcost({ what: `${label}: OUR fuel cost (× $0.70/mi)`, amount: rt * trips * count * R.cost.fuelPerMile });
       const bf = Math.max(R.boxTruckFuelPerRoundTrip, rt * R.boxTruckFuelPerMile);
-      add('Vehicles', `${label}: fuel`, `${plural(trips * count, 'round trip')} × ${bf > R.boxTruckFuelPerRoundTrip ? `${rt} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (min)`}`, trips * count * bf, { ref: v.id, key: `${v.id}:fuel`, phase: 'transport',
+      add('Vehicles', `${label}: fuel`, `${plural(trips * count, 'round trip')} × ${bf > R.boxTruckFuelPerRoundTrip ? `${rt} mi × ${fmt(R.boxTruckFuelPerMile)}` : `${fmt(R.boxTruckFuelPerRoundTrip)} (min)`}`, trips * count * bf, { optional: vOpt, ref: v.id, key: `${v.id}:fuel`, phase: 'transport',
         recipe: [{ k: 'Round trips', v: trips * count }, { k: 'Miles per round trip', v: `${rt} mi` }, { k: 'Fuel charge', v: `${fmt(R.boxTruckFuelPerMile)}/mi`, rate: 'boxTruckFuelPerMile' }, { k: 'Minimum per round trip', v: fmt(R.boxTruckFuelPerRoundTrip), rate: 'boxTruckFuelPerRoundTrip' },
           { k: 'Price', v: `${trips * count} × greater of ${fmt(R.boxTruckFuelPerRoundTrip)} or ${rt} × ${fmt(R.boxTruckFuelPerMile)} = ${fmt(trips * count * bf)}` }] });
       if (!v.js_owned) warnings.push(`"${label}" is a box truck that isn't a U-Haul or the client's. Only fuel is charged; confirm whose truck it is.`);
@@ -318,19 +324,19 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   const eq = plan.equipment || {};
   // Ladders + rigging kit either print as their own lines, or roll into one crew call's price (equipment.attach_to = that
   // call's id), the way we show them on an INSTALL line: "(4) Podium ladders - 200 / Rigging Tool Kit - 100".
-  const host = eq.attach_to ? lines.find((l) => l.section === 'Labor' && l.ref === eq.attach_to) : null;
+  const host = eq.attach_to && !eq.optional ? lines.find((l) => l.section === 'Labor' && l.ref === eq.attach_to) : null;
   const eqItems = [...ladderLines(eq).map((l) => ({ label: l.label, math: `${l.count} × ${fmt(l.price)}`, amount: l.count * l.price, text: `(${l.count}) ${l.label} - ${fmt(l.count * l.price).replace('.00', '')}` })),
     ...(eq.rigging_kit ? [{ label: 'Rigging tool kit', math: 'flat', amount: R.riggingKit, text: `Rigging Tool Kit - ${fmt(R.riggingKit).replace('.00', '')}` }] : [])];
   for (const e of eqItems) {
     if (host) { host.amount = round2(host.amount + e.amount); host.attached.push(e.text); host.math += ` + ${e.label} ${fmt(e.amount)}`; }
-    else add('Equipment', e.label, e.math, e.amount, { phase: 'equipment', recipe: [{ k: 'Math', v: `${e.math} = ${fmt(e.amount)}` }] });
+    else add('Equipment', e.label, e.math, e.amount, { optional: !!eq.optional, phase: 'equipment', recipe: [{ k: 'Math', v: `${e.math} = ${fmt(e.amount)}` }] });
   }
   for (const r of plan.additional_rentals || []) {
-    if (num(r.amount) > 0 && !r.js_owned) costs.push({ what: `${r.label || 'Rental'} (pass-through)`, amount: num(r.amount) });
+    if (num(r.amount) > 0 && !r.js_owned && !r.optional) costs.push({ what: `${r.label || 'Rental'} (pass-through)`, amount: num(r.amount) });
     if (num(r.amount) > 0 && production && !r.js_owned) {
       const up = R.production.rentalUpcharge;
-      add('Equipment', r.label || 'Additional rental', `our cost ${fmt(num(r.amount))} + ${Math.round(up * 100)}% handling${r.note ? `: ${r.note}` : ''}`, num(r.amount) * (1 + up), { phase: 'other', display: r.note || 'Outside rental, coordinated by Jersey Strike' });
-    } else if (num(r.amount) > 0) add('Equipment', r.label || 'Additional rental', r.note ? `pass-through: ${r.note}` : 'pass-through', num(r.amount), { phase: 'other' });
+      add('Equipment', r.label || 'Additional rental', `our cost ${fmt(num(r.amount))} + ${Math.round(up * 100)}% handling${r.note ? `: ${r.note}` : ''}`, num(r.amount) * (1 + up), { optional: !!r.optional, phase: 'other', display: r.note || 'Outside rental, coordinated by Jersey Strike' });
+    } else if (num(r.amount) > 0) add('Equipment', r.label || 'Additional rental', r.note ? `pass-through: ${r.note}` : 'pass-through', num(r.amount), { optional: !!r.optional, phase: 'other' });
   }
 
   // Sourced items (chandeliers, greenery, disco balls, decor we buy for the job): our cost × 2 = 50% margin.
@@ -366,7 +372,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   // Travel
   const t = plan.travel || {};
   if (num(t.tolls) > 0) costs.push({ what: 'Tolls', amount: num(t.tolls) });
-  if (num(t.tolls) > 0) add('Travel', 'Tolls (estimate)', t.tolls_note || 'pass-through', num(t.tolls), { phase: 'travel' });
+  if (num(t.tolls) > 0) add('Travel', 'Tolls (estimate)', t.tolls_note || 'pass-through', num(t.tolls), { phase: 'travel', ...(truckGroup ? { group: truckGroup, partName: 'Tolls' } : {}) });
   if (num(t.hotel_nights) > 0 && num(t.hotel_rooms) > 0) {
     const rate = num(t.hotel_rate_estimate, 180);
     costs.push({ what: 'Hotel', amount: num(t.hotel_rooms) * num(t.hotel_nights) * rate });
@@ -390,6 +396,30 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     }
   }
 
+  // U-Haul parts → one line per truck (its recipe keeps every part; a price set by hand on the whole truck wins).
+  const mergeParts = (arr) => {
+    const byG = new Map(); const out = [];
+    for (const l of arr) {
+      if (!l.group) { out.push(l); continue; }
+      let m = byG.get(l.group);
+      if (!m) { m = { ...l, key: `${l.group}:truck`, label: l.groupLabel || l.label, parts: [], recipe: [], amount: 0, overridden: false }; delete m.calc; byG.set(l.group, m); out.push(m); }
+      if (!m.ref && l.ref) m.ref = l.ref;
+      m.parts.push(l); m.amount = round2(m.amount + l.amount); m.overridden = m.overridden || !!l.overridden;
+      m.recipe.push({ k: `▸ ${l.partName || l.label}`, v: fmt(l.amount), part: true }, ...(l.recipe || []).filter((r) => !/^Price$/.test(r.k)).map((r) => ({ ...r, k: `   ${r.k}` })));
+    }
+    for (const m of byG.values()) {
+      m.math = m.parts.map((x) => `${x.partName || x.label} ${fmt(x.amount)}`).join(' + ');
+      m.recipe.push({ k: 'Price (one line on the proposal)', v: `${m.math} = ${fmt(m.amount)}` });
+      const o = lo[m.key];
+      if (o !== undefined && o !== null && o !== '' && Number.isFinite(Number(o))) {
+        m.calc = m.amount; m.amount = round2(Number(o)); m.overridden = true;
+        m.recipe.push({ k: 'Set by hand for this event', v: `${fmt(m.amount)} (the math says ${fmt(m.calc)})` }); m.math = `${m.math} → set by hand: ${fmt(m.amount)}`;
+      }
+    }
+    arr.splice(0, arr.length, ...out);
+  };
+  mergeParts(lines); mergeParts(optionals);
+
   // Trellis-style order: sourcing → studio → delivery → install → strike → fabrication → vehicles → equipment → other.
   if (ctx.groupByPhase) {
     // Sections in order (set up / install before strike), and inside a section by date (multi-day installs: day 1, day 2…).
@@ -408,7 +438,7 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   const yearRule = byYear && !g ? R.baseFeeByYear[byYear] : null; // grandfathered clients (Wile, APTP, ALAT) keep $300 per venue day
   let baseFee;
   if (yearRule?.per === 'call') {
-    const venueCalls = (plan.shifts || []).filter((x) => x.kind !== 'design' && x.venue_day !== false).length;
+    const venueCalls = (plan.shifts || []).filter((x) => x.kind !== 'design' && x.venue_day !== false && !x.optional).length;
     const n = plan.base_fee_calls != null && plan.base_fee_calls !== '' ? Math.max(0, Math.round(num(plan.base_fee_calls))) : venueCalls;
     const amt = ov.baseFeePerVenueDay ?? yearRule.amount;
     baseFee = { per: 'call', count: n, amount: amt, year: byYear };
@@ -460,9 +490,22 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
   const eventFlags = events.map((e) => `LOCAL EVENT ${e.when === 'same day' ? 'ON THE DATE' : 'THE DAY BEFORE/AFTER'} (${e.date}): ${e.name}. Add ~${e.buffer} min to every drive into/out of the area, plan the route around the closures, and confirm the venue's loading/access plan.`);
   warnings.unshift(...eventFlags, ...checkReach(plan, inquiry), ...inv.warnings);
 
+  // One block per optional piece (a U-Haul's rental + fuel + management stay together), priced the way it would be added:
+  // an optional crew call at a venue carries its base fee (2027+ per-call rule), and every block carries the admin fee.
+  const optBlocks = Object.values(optionals.reduce((m, l) => { const k = l.ref || l.key || l.label;
+    const o = m[k] || (m[k] = { title: l.section === 'Vehicles' ? String(l.label).split(':')[0] : l.label, lines: [], admin: 0, total: 0, note: '*Noted for consideration; not included in this proposal’s total investment.' });
+    o.lines.push(l); o.total = round2(o.total + l.amount); return m; }, {}));
+  for (const o of optBlocks) {
+    const sh = (plan.shifts || []).find((x) => x.optional && o.lines.some((l) => l.section === 'Labor' && l.ref === x.id));
+    if (sh && baseFee?.per === 'call' && sh.kind !== 'design' && sh.venue_day !== false && baseFee.amount) {
+      o.lines.push({ section: 'Charges', label: 'Base Service', math: `1 crew call × ${fmt(baseFee.amount)}`, display: `1 crew call × ${fmt(baseFee.amount)}`, amount: baseFee.amount, key: `${o.lines[0].key}:base` });
+      o.total = round2(o.total + baseFee.amount);
+    }
+    o.admin = round2(o.total * adminPct); o.total = round2(o.total + o.admin);
+  }
   return {
     optionalLines: optionals,
-    optional: optionals.map((l) => ({ title: l.label, lines: [l], admin: 0, total: l.amount, note: '*Noted for consideration; not included in this proposal’s total investment.' })),
+    optional: optBlocks,
     lines, charges, baseFee, itemsSubtotal, subtotal, minimum, adminPct, feeLabel, production, admin, discount, total, uhauls, fabs, margin, warnings, gear: inv.pull, reach: plan.reach_note || null, localEvents: events,
     grandfathered: g ? g.note : '',
   };

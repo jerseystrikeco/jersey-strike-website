@@ -74,9 +74,11 @@ const rd = researchDays('2027-06-12', { shifts: [{ date: '6/10/27', kind: 'insta
 check(rd.map((d) => d.date).join() === '2027-06-09,2027-06-10,2027-06-12,2027-06-13' && rd[0].why.includes('travel in'), `research days: install, event/strike, travel in + back (${rd.map((d) => d.date).join(', ')})`);
 check(uncovered(rd, ['2027-06-12']).map((d) => d.date).join() === '2027-06-09,2027-06-10', 'second search only covers days the first one missed');
 const opt = priceQuote({ custom_items: [{ id: 'c1', label: 'Escort wall', qty: 1, unit_price: 4250 }, { id: 'c2', label: 'Fully built bar back', qty: 1, unit_price: 6650, optional: true }], line_overrides: { c1: 4000 } }, {});
-check(opt.itemsSubtotal === 4000 && opt.optional.length === 1 && opt.optional[0].total === 6650 && opt.lines[0].overridden && opt.lines[0].recipe.some((r) => /by hand/.test(r.k)), `optional add-on kept out of the total + price set by hand (${opt.itemsSubtotal}, optional ${opt.optional[0]?.total})`);
+check(opt.itemsSubtotal === 4000 && opt.optional.length === 1 && opt.optional[0].total === 7182 && opt.optional[0].admin === 532 && opt.lines[0].overridden && opt.lines[0].recipe.some((r) => /by hand/.test(r.k)), `optional add-on kept out of the total + price set by hand (${opt.itemsSubtotal}, optional ${opt.optional[0]?.total})`);
 const uh = priceQuote({ vehicles: [{ id: 'u1', kind: 'uhaul', label: '15ft U-Haul', round_trip_miles: 300, trips: 1, uhaul_method: 'B', uhaul_rates: { markup: 2 } }] }, {});
-const ur = uh.lines.find((l) => l.key === 'u1:rental');
+const ur = uh.lines.find((l) => l.key === 'u1:truck')?.parts.find((l) => l.key === 'u1:rental');
+const ut = uh.lines.find((l) => l.key === 'u1:truck');
+check(uh.lines.length === 1 && ut.parts.length === 3 && ut.amount === Math.round(ut.parts.reduce((a, l) => a + l.amount, 0) * 100) / 100, `U-Haul prints as one line (${ut?.label}: ${ut?.math})`);
 check(ur && /Method B picked by hand/.test(ur.recipe.find((r) => r.k === 'Used').v) && /× 2\b/.test(ur.math), `U-Haul: method + markup changed for one truck (${ur?.math})`);
 const { quoteSubject } = await import('../netlify/functions/lib/quote-render.mjs');
 check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $3,564.00'), 'fab jobs flag the email subject');
