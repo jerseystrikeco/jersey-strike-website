@@ -45,7 +45,10 @@ export function uncovered(days, done = []) {
 // { notes, days: [ISO], error }
 export async function researchLocalHappenings({ key, model, venue, studio, days = [], from = 'Montclair NJ or Forked River NJ', truck = false }) {
   if (!key || !venue || !days.length) return { notes: '', days: [], error: key ? null : 'no ANTHROPIC_API_KEY' };
-  const list = days.slice(0, 8).map((d) => `- ${pretty(d.date)} (${d.why})`).join('\n');
+  // Each crew-call day is searched as a window: the day before (and that night), the day itself, that night, and the
+  // next day (Alyssa, 11/10/26), since setups, closures and crowds spill over.
+  const shift = (d, n) => iso(Date.parse(`${d}T12:00:00Z`) + n * DAY);
+  const list = days.slice(0, 8).map((d) => `- ${pretty(d.date)} (${d.why}): check ${pretty(shift(d.date, -1))} (day before + that night), ${pretty(d.date)} (day of + night of) and ${pretty(shift(d.date, 1))} (next day)`).join('\n');
   try {
     const r = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -53,17 +56,17 @@ export async function researchLocalHappenings({ key, model, venue, studio, days 
       body: JSON.stringify({
         model: model || 'claude-opus-4-5',
         max_tokens: 2000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(10, 3 + 2 * days.length) }],
+        tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: Math.min(12, 4 + 2 * days.length) }],
         messages: [{ role: 'user', content: `An event crew (vans${truck ? ' and a box truck / U-Haul' : ', sometimes a box truck'}) works at ${venue}${studio ? `, with pickup/drop-off at ${studio}` : ''}, driving from ${from}. They are on the road on these days:
 ${list}
 
-Search the web for anything on those days (including the evening before / after a late crew call) that will snarl traffic, close roads, lock down blocks or make parking and loading hard near the venue, near the pickup/drop-off, or on the likely route:
+Search the web for anything in each of those windows (day before + that night, day of, night of, next day) that will snarl traffic, close roads, lock down blocks or make parking and loading hard near the venue, near the pickup/drop-off, or on the likely route:
 - parades, marathons/races, festivals, street fairs, farmers markets, holiday events, concerts, sports games, protests, presidential/UN motorcades
 - another big event at the same venue or next door (conference, gala, second wedding, game day crowds)
 - film/TV shoots and street parking suspensions or "no parking" permits on the venue's block (e.g. NYC film permits)
 - bridge, tunnel, highway or road work closures on the route (NJ Turnpike, Garden State Pkwy, I-287, I-95, Lincoln/Holland Tunnel, GWB, Verrazzano...)
 - beach-town summer parking/loading rules, ferry or causeway closures
-Answer in at most 8 short bullet lines: "- <date>: <what>, <hours>, <where / which roads or blocks>, <what it means for us (traffic, parking, loading)>, <source site>". Only things you actually found for these days. If you find nothing, answer exactly: NONE FOUND.` }],
+Answer in at most 10 short bullet lines, labeling which window each is in: "- <date> (day before / day of / night of / next day): <what>, <hours>, <where / which roads or blocks>, <what it means for us (traffic, parking, loading)>, <source site>". Only things you actually found for these days. If you find nothing, answer exactly: NONE FOUND.` }],
       }),
     });
     if (!r.ok) return { notes: '', days: [], error: `research ${r.status}: ${(await r.text()).slice(0, 160)}` };
