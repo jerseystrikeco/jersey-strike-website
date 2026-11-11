@@ -240,6 +240,7 @@ export function proposalPdf({ inquiry: q, plan, priced, created = new Date(), im
   }
   doc.moveDown(1.2); ensure(50);
   doc.font(F).fontSize(10).text('*This is a preliminary estimate based on the information provided. Additional hours or team members will be billed if the scope changes, including timeline changes or extensions, collection list changes or additional delivery locations.', IT, doc.y, { width: ITW, lineGap: 1.5 });
+  if ((priced.fabs || []).length || (priced.lines || []).some((l) => l.section === 'Fabrication')) doc.font(F).fontSize(10).text('*Fabrication orders are paid in full before the build starts.', IT, doc.y, { width: ITW, lineGap: 1.5 });
 
   // What happens next
   doc.addPage(); header();

@@ -210,9 +210,7 @@ export function playbookTips(plan, inquiry = {}, ctx = {}) {
       if (leg != null && leg < 60) tips.push({ id: `back:${sh.id}`, text: `${name}'s last leg back to HQ is ${leg} min: the minimum is 1 hr.`, fix: { type: 'back', shift: i, minutes: 60 - leg } });
     }
     // 4. Unload is its own step when things come back
-    // (a strike whose load waits for a next-day studio return unloads on that call instead)
-    const unloadsLater = sh.kind === 'strike' && shifts.some((x, k) => k !== i && x.kind === 'return');
-    if (['strike', 'delivery', 'return'].includes(sh.kind) && !unloadsLater && steps.length >= 2 && !steps.some((x) => /unload|keep (it )?loaded|overnight/i.test(x.label || ''))) {
+    if (['strike', 'delivery', 'return'].includes(sh.kind) && steps.length >= 2 && !steps.some((x) => /unload/i.test(x.label || ''))) {
       const big = truckish.some((v) => /26/.test(`${v.label} ${v.description || ''}`)); const m = big ? 90 : truckish.length ? 45 : 15;
       tips.push({ id: `unload:${sh.id}`, text: `${name} has no unload step: ~${m} min for ${big ? 'a full 26 ft truck' : truckish.length ? 'a U-Haul / box truck' : 'a van'}.`, fix: { type: 'unload', shift: i, minutes: m } });
     }
@@ -236,19 +234,6 @@ export function playbookTips(plan, inquiry = {}, ctx = {}) {
   const wide = (plan.fabrication || []).some((f) => { const m = `${f.label || ''} ${f.description || ''}`.match(/(\d+(?:\.\d+)?)\s*(?:ft|'|feet)?\s*(?:w(?:ide)?\b|×|x)\s*\d/i); return m && Number(m[1]) > 6; }) || (plan.fabrication || []).length >= 3;
   if (wide && !truckish.length) tips.push({ id: 'fabtruck', text: 'A wall-size build (over ~6 ft wide) or several big pieces: 15 ft U-Haul for the install + strike day and a team of 3.', fix: { type: 'fabtruck' } });
   return tips;
-}
-// Makes a plan follow the playbook: applies every tip whose fix type is in `types` (mutates the plan), a few passes
-// so one fix can't leave another rule broken. Returns the texts it fixed. Used for new crew calls + starting
-// templates in the hub, and on every website draft before it's priced.
-export const AUTO_FIX = ['depart', 'back', 'unload', 'kits', 'premium', 'premium_all', 'team', 'ballast'];
-export function followPlaybook(plan, inquiry = {}, ctx = {}, types = AUTO_FIX) {
-  const done = [];
-  for (let pass = 0; pass < 3; pass++) {
-    const todo = playbookTips(plan, inquiry, ctx).filter((t) => t.fix && types.includes(t.fix.type));
-    if (!todo.length) break;
-    for (const t of todo) if (applyTip(plan, t.fix)) done.push(t.text);
-  }
-  return done;
 }
 // Applies one tip's fix to a plan (mutates it). Returns false when it can't.
 export function applyTip(plan, fix) {
