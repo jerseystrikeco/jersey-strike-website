@@ -146,7 +146,9 @@ Example (Alyssa's own, GITP strike at Park Loft, 10:30pm start, 11:30pm hard out
 - 11:45pm depart for studio
 - 12:45am back at studio, unload
 - 1:00am done (GITP's studio is HQ; for any other client, add the drive from their studio back to HQ)
-= 3.5 hrs portal to portal. With a hard out, strike + backload runs right up to the hard out (not earlier); depart ~15 min after. Return drive = Google + 15 min, rounded up (about an hour here). Unload is its own step, sized to the vehicle and how full it is: ~15 min for a van; 30–60 min for a smaller box truck or U-Haul; up to 1.5 hrs for a full 26 ft box truck (less with a bigger crew or a light load).
+= 3.5 hrs portal to portal. With a hard out, strike + backload runs right up to the hard out (not earlier); depart ~15 min after.
+
+**Strict 1-hour (or shorter) hard out (rule added 11/11/26):** we carry floral arrangements out whole to clear the venue in time, then finish the standard strike at the truck (get the truck situated, pull stems out of vessels, consolidate, pack + strap). Build in an extra 30–60 min after the hard out for that (closer to 60 for a big floral load or full truck), then depart. The Park Loft example above is a 1-hour hard out, so it now runs ~4–4.5 hrs portal to portal (depart for the studio ~12:15–12:45am). Return drive = Google + 15 min, rounded up (about an hour here). Unload is its own step, sized to the vehicle and how full it is: ~15 min for a van; 30–60 min for a smaller box truck or U-Haul; up to 1.5 hrs for a full 26 ft box truck (less with a bigger crew or a light load).
 
 ## Billing actual overtime
 When a job runs past the quoted timeline (and the client approved it), keep the quoted start time and bill the extra time as its own "Timeline extension" line, in completed quarter hours (not rounded up): quoted back 8:00PM, actual back 10:47PM = +2.75 hrs per person. Show quoted vs actual.
@@ -166,7 +168,7 @@ This is a preliminary estimate based on the information provided. Additional hou
 - Reference job: past-jobs/2026-10-24-wile-jamie-greg.md
 
 ## Quote layout (match the existing proposal template)
-Event header (dates, venues, addresses, florist + contact) → TIMELINE per day/shift with team size and roles → TASK LIST / scope → QUOTE BREAKDOWN line items (team, hours × rate) → Subtotal → Base Service → Admin Fee → Total → scope-change footer. Retainer 15% via Dubsado. → then (every proposal) an OUR SERVICES page and the RENTAL CATALOG pages (photo, size, rental price per piece), pulled from the hub (Settings → Proposal pages, Library → Inventory). The website drafts add them automatically; for a proposal built anywhere else, download them from hub Settings → "Download services + rental catalog (PDF)" and add them to the end.
+Event header (dates, venues, addresses, florist + contact) → TIMELINE per day/shift with team size and roles → TASK LIST / scope → QUOTE BREAKDOWN line items (team, hours × rate) → Subtotal → Base Service → Admin Fee → Total → scope-change footer. Retainer 15% via Dubsado.
 
 ## Defaults until told otherwise
 - Overtime / late night: no surcharge (late strikes are already priced through the $65 rate and base fee)
