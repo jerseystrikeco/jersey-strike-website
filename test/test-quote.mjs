@@ -80,6 +80,14 @@ const ur = uh.lines.find((l) => l.key === 'u1:truck')?.parts.find((l) => l.key =
 const ut = uh.lines.find((l) => l.key === 'u1:truck');
 check(uh.lines.length === 1 && ut.parts.length === 3 && ut.amount === Math.round(ut.parts.reduce((a, l) => a + l.amount, 0) * 100) / 100, `U-Haul prints as one line (${ut?.label}: ${ut?.math})`);
 check(ur && /Method B picked by hand/.test(ur.recipe.find((r) => r.k === 'Used').v) && /× 2\b/.test(ur.math), `U-Haul: method + markup changed for one truck (${ur?.math})`);
+const { applyHardOut } = await import('../netlify/functions/lib/pricing.mjs');
+const park = applyHardOut({ id: 'p', label: 'Strike', kind: 'strike', team_size: 3, depart_hq: '9:30pm', back_hq: '1:00am', hard_out: '11:30pm', steps: [{ time: '9:30pm', label: 'Depart HQ' }, { time: '10:30pm', label: 'Strike begins' }, { time: '11:30pm', label: 'Strike done, van backloaded + organized' }, { time: '11:45pm', label: 'Depart for studio' }, { time: '12:45am', label: 'Back at studio, unload' }, { time: '1:00am', label: 'Done' }] });
+const parkP = priceQuote({ shifts: [park] }, {});
+check(park.steps.some((x) => /finish strike at the truck/i.test(x.label)) && park.steps.find((x) => /depart for studio/i.test(x.label)).time === '12:15am' && parkP.lines[0].hours === 4 && parkP.warnings.some((w) => /hard out/.test(w)), `1-hour hard out adds 45 min at the truck (Park Loft: depart 12:15am, ${parkP.lines[0].hours} hrs)`);
+const { holidayOf, playbookTips } = await import('../netlify/functions/lib/pricing.mjs');
+check(holidayOf('2026-11-25')?.premium === 'major_holiday' && holidayOf('12/23/26')?.premium === 'major_holiday' && holidayOf('1/2/27')?.premium === 'major_holiday' && holidayOf('5/29/27')?.premium === 'holiday' && !holidayOf('12/11/26'), 'holiday calendar: Thanksgiving Wed–Sun, Dec 23 – Jan 2, Memorial Day weekend; Dec 11 is not one');
+const pt = playbookTips({ event_date: '2026-11-27', equipment: { strike_kits: 1 }, shifts: [{ id: 's', label: 'Strike', kind: 'strike', team_size: 1, depart_hq: '9:00pm', date: '11/27/26', steps: [{ time: '9:00pm', label: 'Depart HQ' }, { time: '9:45pm', label: 'Strike begins' }, { time: '11:00pm', label: 'Strike done' }, { time: '12:00am', label: 'Back at HQ' }] }] }, {}, { inquiredOn: '2026-11-24' });
+check(['hol:s', 'solo:s', 'out:s', 'unload:s', 'short'].every((k) => pt.some((t) => t.id === k)), `playbook tips: ${pt.map((t) => t.id).join(', ')}`);
 const { quoteSubject } = await import('../netlify/functions/lib/quote-render.mjs');
 check(quoteSubject({ business: 'X', eventDate: '2027-06-12' }, fab).startsWith('[Alyssa: check fab with Larry] Draft quote $3,564.00'), 'fab jobs flag the email subject');
 

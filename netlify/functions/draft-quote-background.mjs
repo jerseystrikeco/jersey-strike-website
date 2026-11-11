@@ -20,12 +20,12 @@
 import { planRoutes } from './lib/routes.mjs';
 import { planQuote, researchLocalEvents } from './lib/claude.mjs';
 import { staffCandidates } from './lib/staffing.mjs';
-import { priceQuote } from './lib/pricing.mjs';
+import { priceQuote, followPlaybook } from './lib/pricing.mjs';
 import { renderQuoteEmail, renderQuoteText, renderFlagsText, quoteSubject } from './lib/quote-render.mjs';
 import { triggerSecret } from './lib/trigger.mjs';
 import { subjectFor, inquiryMessageId } from './submission-created.mjs';
 import { proposalPdf, proposalFilename } from './lib/proposal-pdf.mjs';
-import { sendProposalToHub, fetchCatalog } from './lib/hub.mjs';
+import { sendProposalToHub } from './lib/hub.mjs';
 
 // Airtable columns for the draft. Add these to the Inquiries table (see LAUNCH-GUIDE.md).
 const DEFAULT_TABLE = 'tblvthafdL2XhCDZt'; // EVENT INQUIRIES + LEADS (same as submission-created)
@@ -53,7 +53,11 @@ export async function draftQuote(inquiry) {
   const { plan, docNotes, model } = await planQuote(inquiry, routes, staff, v1note);
   const research = await researchLocalEvents(inquiry, plan).catch((e) => ({ notes: '', error: e.message }));
   if (research.error) console.log('[quote] local event research:', research.error);
-  const ctx = { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '', groupByPhase: true };
+  const ctx = { otherEvents: staff?.calendar?.other_events_same_day || [], hqName: routes?.hq?.name || '', groupByPhase: true, inquiredOn: new Date().toISOString() };
+  // Every draft follows the playbook: timing minimums, unload step, strike kits, holiday / short-notice premiums,
+  // 2+ on night or ladder calls, fab ballast. Fixed in code, listed so the admin team sees what changed.
+  const autoFix = (pl) => { const fixed = followPlaybook(pl, inquiry, ctx); if (fixed.length) pl.logistics_notes = [...(pl.logistics_notes || []), `Playbook rules applied to this draft: ${fixed.join(' | ')}`]; };
+  autoFix(plan);
   plan.local_research = research.notes || '';
   const found = !!(research.notes && !research.none);
   let v2 = null;
@@ -67,6 +71,7 @@ VERSION 2: this is the second draft. Version 1 was planned without these finding
       v2 = { plan: r2.plan, docNotes: r2.docNotes, model: r2.model };
       v2.plan.option_label = 'Version 2';
       v2.plan.local_research = research.notes;
+      autoFix(v2.plan);
       v2.priced = priceQuote(v2.plan, inquiry, ctx);
       v2.hits = hits;
     } catch (e) {
@@ -135,28 +140,26 @@ export default async (req) => {
   const v2File = () => proposalFilename(inquiry).replace(/\.pdf$/i, ' - Version 2.pdf');
   const v2args = v2 ? { inquiry, ...result, plan: v2.plan, priced: v2.priced, docNotes: v2.docNotes, model: v2.model, recordUrl } : null;
   // Client-ready proposal PDF (Trellis layout) for the admin team to review/forward.
-  // Every proposal ends with our services + rental catalog pages (from the hub; skipped if it can't be reached).
-  const catalog = await fetchCatalog();
   let attachments; let pdfBytes = null; let pdf2 = null;
   try {
-    const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced, catalog });
+    const pdf = await proposalPdf({ inquiry, plan: result.plan, priced: result.priced });
     pdfBytes = pdf;
     attachments = [{ filename: proposalFilename(inquiry), content: pdf.toString('base64') }];
   } catch (e) {
     console.error('[quote] proposal PDF failed:', e.message);
   }
-  if (v2) pdf2 = await proposalPdf({ inquiry, plan: v2.plan, priced: v2.priced, catalog }).catch((e) => { console.error('[quote] Version 2 PDF failed:', e.message); return null; });
+  if (v2) pdf2 = await proposalPdf({ inquiry, plan: v2.plan, priced: v2.priced }).catch((e) => { console.error('[quote] Version 2 PDF failed:', e.message); return null; });
   const steps = await Promise.allSettled([
     // Threaded under the original inquiry email (internal only: no client address anywhere).
     sendEmail({ subject: `Re: ${subjectFor(inquiry)}`, html: renderQuoteEmail(args), text: `${quoteSubject(inquiry, result.priced)}\n\n` + renderQuoteText(args) + '\n\n' + renderFlagsText(args),
       headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments }),
     recordId ? updateAirtable(recordId, args) : Promise.reject(new Error('no Airtable record id (Phase 1 save failed)')),
     // The same draft PDF + total on the lead in the hub (the total is owner-only there).
-    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId, plan: result.plan, catalogIncluded: !!catalog }) : Promise.reject(new Error('no proposal PDF')),
+    pdfBytes ? sendProposalToHub(inquiry, { pdf: pdfBytes, filename: proposalFilename(inquiry), total: result.priced.total, leadId: hubLeadId, plan: result.plan }) : Promise.reject(new Error('no proposal PDF')),
     // Version 2 (planned around local happenings): its own email in the same thread + its own draft on the lead.
     v2 ? sendEmail({ subject: `Re: ${subjectFor(inquiry)} · Version 2 (planned around local happenings)`, html: renderQuoteEmail(v2args), text: `${quoteSubject(inquiry, v2.priced)} · Version 2\n\n` + renderQuoteText(v2args) + '\n\n' + renderFlagsText(v2args),
       headers: { 'In-Reply-To': inquiryMessageId(inquiry), References: inquiryMessageId(inquiry) }, attachments: pdf2 ? [{ filename: v2File(), content: pdf2.toString('base64') }] : undefined }) : Promise.resolve('no version 2'),
-    v2 && pdf2 ? sendProposalToHub(inquiry, { pdf: pdf2, filename: v2File(), total: v2.priced.total, leadId: hubLeadId, plan: v2.plan, version: 2, catalogIncluded: !!catalog }) : Promise.resolve('no version 2'),
+    v2 && pdf2 ? sendProposalToHub(inquiry, { pdf: pdf2, filename: v2File(), total: v2.priced.total, leadId: hubLeadId, plan: v2.plan, version: 2 }) : Promise.resolve('no version 2'),
   ]);
   steps.forEach((r, i) => {
     const step = ['email', 'airtable', 'hub', 'email v2', 'hub v2'][i];

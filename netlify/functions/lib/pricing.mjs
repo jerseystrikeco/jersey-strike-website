@@ -13,7 +13,7 @@ export const RATES = {
   // Triggers: holiday, nyc_difficult, short_notice, extreme_access, difficult_scope (see PRICING-FORMULA.md).
   premiumPerTrigger: 10,
   premiumMax: 20,
-  // Major holidays (Thanksgiving Day + Black Friday, Dec 24–26, Dec 31–Jan 1, July 4): time and a half
+  // Major holidays (Thanksgiving weekend Wed–Sun, Dec 23 – Jan 2, July 4; see holidayOf below): time and a half
   // on the whole rate, e.g. $65 -> $97.50 (what we charged the day after Christmas 2025).
   majorHolidayMultiplier: 1.5,
   studioDayPerPerson: 450, // processing / design studio / reset days, flat
@@ -114,6 +114,162 @@ export function toMinutes(t) {
 }
 
 // Portal to portal: depart HQ -> back at HQ. Handles shifts past midnight. Rounds up to 1/4 hr.
+// Strict hard out (rule 11/11/26): with 1 hour or less from strike start to the venue's hard out, the crew carries the
+// arrangements out whole, then finishes the standard strike at the truck (stems out of vessels, consolidate, pack +
+// strap): 30-60 min after the hard out (45 by default) before departing. shift.hard_out = the venue's hard out.
+export const TRUCK_STEP = 'Finish strike at the truck: stems out of vessels, consolidate, pack + strap';
+const isTruckStep = (st) => /finish strike at the truck/i.test(st?.label || '');
+const fmtMin = (m) => { m = ((m % 1440) + 1440) % 1440; const h = Math.floor(m / 60), mm = m % 60; return `${h % 12 || 12}:${String(mm).padStart(2, '0')}${h < 12 ? 'am' : 'pm'}`; };
+const nearDiff = (a, b) => { let d = (b - a) % 1440; if (d < -720) d += 1440; if (d > 720) d -= 1440; return d; };
+const startIdx = (steps) => steps.findIndex((x) => /begin|start/i.test(x.label || '') && toMinutes(x.time) != null);
+export function strikeWindow(s) {
+  const st = s?.steps || []; const i = startIdx(st);
+  const start = i >= 0 ? toMinutes(st[i].time) : null; const ho = toMinutes(s?.hard_out);
+  if (start == null || ho == null) return null;
+  let w = ho - start; if (w <= 0) w += 1440;
+  return { start, hardOut: ho, minutes: w, tight: w <= 60, truck: st.some(isTruckStep) };
+}
+// Puts the "finish strike at the truck" step in (or takes it out) and moves the drive back + return to match.
+export function applyHardOut(s) {
+  const w = strikeWindow(s); if (!w) return s;
+  const steps = (s.steps || []).map((x) => ({ ...x }));
+  const shiftFrom = (k0, d) => { for (let k = k0; k < steps.length; k++) { const m = toMinutes(steps[k].time); if (m != null) steps[k].time = fmtMin(m + d); } };
+  const backOf = () => (steps.length && toMinutes(steps[steps.length - 1].time) != null ? steps[steps.length - 1].time : s.back_hq);
+  let ti = steps.findIndex(isTruckStep);
+  if (!w.tight) {
+    if (ti < 0) return s;
+    const tEnd = toMinutes(steps[ti].time) + (Number(s.truck_applied) || 45);
+    steps.splice(ti, 1);
+    const prev = steps[ti - 1]; if (prev && /out of the venue by the hard out/i.test(prev.label || '')) prev.label = 'Strike done, van backloaded + organized';
+    const pm = prev ? toMinutes(prev.time) : null;
+    // the truck time comes back off; a "depart" step goes back to ~15 min after the strike is done
+    if (pm != null && steps[ti]) shiftFrom(ti, nearDiff(tEnd, pm + (/depart/i.test(steps[ti].label || '') ? 15 : 0)));
+    const { truck_applied: _t, ...rest } = s; return { ...rest, steps, back_hq: backOf() };
+  }
+  const tmin = Math.max(30, Math.min(60, Math.round(Number(s.truck_min) || 45)));
+  const si = startIdx(steps);
+  let di = ti > 0 ? ti - 1 : steps.findIndex((x, k) => k > si && /done|backload|out of the venue/i.test(x.label || ''));
+  if (di < 0) di = si;
+  // where the strike work ended before this change (the next steps keep their gap from it: the drive, or depart right away)
+  const nx0 = steps[(ti >= 0 ? ti : di) + 1]; const nxm = nx0 ? toMinutes(nx0.time) : null;
+  let prevEnd = ti >= 0 ? toMinutes(steps[ti].time) + (Number(s.truck_applied) || 45) : toMinutes(steps[di].time);
+  if (ti < 0 && nx0 && /depart/i.test(nx0.label || '') && nxm != null && prevEnd != null) prevEnd += Math.max(0, Math.min(15, nearDiff(prevEnd, nxm)));
+  if (di !== si) { steps[di].time = fmtMin(w.hardOut); if (!/out of the venue/i.test(steps[di].label || '')) steps[di].label = 'Out of the venue by the hard out (arrangements carried out whole)'; }
+  const truck = { time: fmtMin(w.hardOut), label: `${TRUCK_STEP} (${tmin} min)` };
+  if (ti < 0) { steps.splice(di + 1, 0, truck); ti = di + 1; } else steps[ti] = truck;
+  if (steps[ti + 1] && prevEnd != null) shiftFrom(ti + 1, nearDiff(prevEnd, w.hardOut + tmin));
+  return { ...s, steps, back_hq: backOf(), truck_applied: tmin };
+}
+
+// The playbook's holiday calendar (same as the website drafts' date check): 'major' = time and a half,
+// 'holiday' = +$10/hr. Returns the premium for a date (YYYY-MM-DD or M/D/YY), or null.
+export function holidayOf(raw) {
+  const iso = String(raw || '').match(/(\d{4})-(\d{2})-(\d{2})/); const us = String(raw || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  const d = iso ? new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3])) : us ? new Date(Date.UTC(+(us[3].length === 2 ? `20${us[3]}` : us[3]), +us[1] - 1, +us[2])) : null;
+  if (!d || isNaN(d)) return null;
+  const y = d.getUTCFullYear(); const D = (mo, day) => Date.UTC(y, mo, day);
+  const nth = (mo, wd, n) => { const f = new Date(D(mo, 1)).getUTCDay(); return D(mo, 1 + ((wd - f + 7) % 7) + (n - 1) * 7); };
+  const last = (mo, wd) => { const l = new Date(D(mo + 1, 0)); return D(mo, l.getUTCDate() - ((l.getUTCDay() - wd + 7) % 7)); };
+  const DAY = 864e5, t = d.getTime(), thanks = nth(10, 4, 4);
+  const cal = [["New Year's Day", D(0, 1), 'major', 0, 0], ['the holiday season (Dec 23 – Jan 2)', D(0, 1), 'major', 0, 1], ["Valentine's week", D(1, 14), 'holiday', 7, 0],
+    ["Mother's Day week", nth(4, 0, 2), 'holiday', 6, 0], ['Memorial Day weekend', last(4, 1), 'holiday', 3, 0], ['July 4th', D(6, 4), 'major', 0, 0],
+    ['Labor Day weekend', nth(8, 1, 1), 'holiday', 3, 0], ['Thanksgiving weekend (Wed–Sun)', thanks, 'major', 1, 3], ['the holiday season (Dec 23 – Jan 2)', D(11, 23), 'major', 0, 8]];
+  const hits = cal.filter(([, at, , b, a]) => t >= at - b * DAY && t <= at + a * DAY);
+  const h = hits.find((x) => x[2] === 'major') || hits.find((x) => x[2] === 'holiday');
+  return h ? { name: h[0], premium: h[2] === 'major' ? 'major_holiday' : 'holiday' } : null;
+}
+
+// Playbook checks with a one-click fix (the hub's quote editor shows them with a button; the website drafts list
+// them under Check before quoting). Each tip: { id, text, fix } where fix is a plain object applyTip() understands.
+export function playbookTips(plan, inquiry = {}, ctx = {}) {
+  const tips = []; const shifts = plan.shifts || []; const g = clientRules(inquiry.business || inquiry.client || '');
+  const evIso = String(plan.event_date || inquiry.event_date || inquiry.eventDate || '');
+  const ev = evIso.match(/^\d{2}(\d{2})-(\d{2})-(\d{2})$/); const evShort = ev ? `${+ev[2]}/${+ev[3]}/${ev[1]}` : '';
+  const vehicles = plan.vehicles || []; const eq = plan.equipment || {};
+  const truckish = vehicles.filter((v) => ['uhaul', 'box_truck', 'client_truck'].includes(v.kind));
+  const ladders = (eq.ladders_list || []).some((l) => Number(l.count) > 0);
+  const venueCalls = shifts.filter((x) => x.kind !== 'design' && !x.optional);
+  const mins = (t) => toMinutes(t);
+  const gap = (a, b) => { const x = mins(a), y = mins(b); if (x == null || y == null) return null; let d = y - x; if (d < 0) d += 1440; return d; };
+  shifts.forEach((sh, i) => {
+    const name = `"${sh.label || 'Crew call'}"${sh.date ? ` (${sh.date})` : ''}`;
+    const pr = sh.premium_reasons || []; const team = Math.round(Number(sh.team_size) || 0);
+    const steps = sh.steps || []; const si = steps.findIndex((x) => /begin|start/i.test(x.label || '') && mins(x.time) != null);
+    // 1. Holidays from the call's date
+    const hol = !g && sh.kind !== 'design' ? holidayOf(sh.date || evShort) : null;
+    if (hol && !pr.includes(hol.premium) && !(hol.premium === 'holiday' && pr.includes('major_holiday')))
+      tips.push({ id: `hol:${sh.id}`, text: `${name} falls on ${hol.name}: ${hol.premium === 'major_holiday' ? 'time and a half' : '+$10/hr holiday premium'}, and line up the team early (holiday staffing is hard).`, fix: { type: 'premium', shift: i, reason: hol.premium } });
+    // 6. Night strikes + anything with ladders get at least 2
+    const startM = si >= 0 ? mins(steps[si].time) : mins(sh.depart_hq);
+    const night = sh.kind === 'strike' || (startM != null && (startM >= 18 * 60 || startM < 5 * 60));
+    if (team === 1 && sh.kind !== 'design' && (night || ladders)) tips.push({ id: `solo:${sh.id}`, text: `${name} is a solo call ${night ? 'at night' : 'with ladders'}: the playbook says at least 2.`, fix: { type: 'team', shift: i, size: 2 } });
+    // 3a. 1 hr minimum out of HQ (depart → work starts) and back (last stop → HQ)
+    if (si > 0) { const out = gap(sh.depart_hq, steps[si].time); if (out != null && out < 60) tips.push({ id: `out:${sh.id}`, text: `${name} leaves HQ only ${out} min before work starts: the minimum is 1 hr.`, fix: { type: 'depart', shift: i, minutes: 60 - out } }); }
+    if (steps.length >= 3 && /\bhq\b/i.test(steps[steps.length - 1].label || '')) {
+      const leg = gap(steps[steps.length - 2].time, steps[steps.length - 1].time);
+      if (leg != null && leg < 60) tips.push({ id: `back:${sh.id}`, text: `${name}'s last leg back to HQ is ${leg} min: the minimum is 1 hr.`, fix: { type: 'back', shift: i, minutes: 60 - leg } });
+    }
+    // 4. Unload is its own step when things come back
+    // (a strike whose load waits for a next-day studio return unloads on that call instead)
+    const unloadsLater = sh.kind === 'strike' && shifts.some((x, k) => k !== i && x.kind === 'return');
+    if (['strike', 'delivery', 'return'].includes(sh.kind) && !unloadsLater && steps.length >= 2 && !steps.some((x) => /unload|keep (it )?loaded|overnight/i.test(x.label || ''))) {
+      const big = truckish.some((v) => /26/.test(`${v.label} ${v.description || ''}`)); const m = big ? 90 : truckish.length ? 45 : 15;
+      tips.push({ id: `unload:${sh.id}`, text: `${name} has no unload step: ~${m} min for ${big ? 'a full 26 ft truck' : truckish.length ? 'a U-Haul / box truck' : 'a van'}.`, fix: { type: 'unload', shift: i, minutes: m } });
+    }
+    // 7. Destination: 12+ hrs on site and 2+ hrs drive home → hotel + meals
+    if (steps.length >= 4 && !(Number(plan.travel?.hotel_nights) > 0)) {
+      const onsite = gap(steps[1].time, steps[steps.length - 2].time); const home = gap(steps[steps.length - 2].time, steps[steps.length - 1].time);
+      if (onsite != null && home != null && onsite >= 12 * 60 && home >= 120) tips.push({ id: `hotel:${sh.id}`, text: `${name} is ${Math.round(onsite / 6) / 10} hrs on site with a ${Math.round(home / 6) / 10} hr drive home: destination rules say hotel at cost + $50/person/day meals.`, fix: { type: 'hotel', rooms: team, nights: 1, meals: team } });
+    }
+  });
+  // 2. Short notice: inquiry less than 7 days before the event
+  const asked = ctx.inquiredOn ? new Date(ctx.inquiredOn) : null; const evD = ev ? new Date(`${evIso}T12:00:00`) : null;
+  if (asked && evD && !isNaN(asked) && !g) { const days = Math.floor((evD - asked) / 864e5);
+    if (days >= 0 && days < 7 && venueCalls.some((x) => !(x.premium_reasons || []).includes('short_notice'))) tips.push({ id: 'short', text: `Inquiry came in ${days} day${days === 1 ? '' : 's'} before the event: short notice is +$10/hr on the crew calls.`, fix: { type: 'premium_all', reason: 'short_notice' } }); }
+  // 8. Strike kits: one per crew call
+  const kits = Number(eq.strike_kits) || 0; if (venueCalls.length && kits < Math.min(4, venueCalls.length)) tips.push({ id: 'kits', text: `${venueCalls.length} crew call${venueCalls.length > 1 ? 's' : ''} but ${kits} strike kit${kits === 1 ? '' : 's'} planned: one per call (we own 4).`, fix: { type: 'kits', value: Math.min(4, venueCalls.length) } });
+  // 9. Fabrication: ballast, big builds ride in a 15 ft U-Haul with a team of 3
+  (plan.fabrication || []).forEach((f, i) => {
+    const txt = `${f.label || ''} ${f.description || ''} ${(f.components || []).map((c) => c.item).join(' ')} ${f.materials_breakdown || ''}`;
+    if (!/sand ?bag|ballast/i.test(txt)) tips.push({ id: `ballast:${f.id || i}`, text: `"${f.label || 'Build'}": every freestanding build gets 8 sand bags for ballast.`, fix: { type: 'ballast', fab: i } });
+  });
+  const wide = (plan.fabrication || []).some((f) => { const m = `${f.label || ''} ${f.description || ''}`.match(/(\d+(?:\.\d+)?)\s*(?:ft|'|feet)?\s*(?:w(?:ide)?\b|×|x)\s*\d/i); return m && Number(m[1]) > 6; }) || (plan.fabrication || []).length >= 3;
+  if (wide && !truckish.length) tips.push({ id: 'fabtruck', text: 'A wall-size build (over ~6 ft wide) or several big pieces: 15 ft U-Haul for the install + strike day and a team of 3.', fix: { type: 'fabtruck' } });
+  return tips;
+}
+// Makes a plan follow the playbook: applies every tip whose fix type is in `types` (mutates the plan), a few passes
+// so one fix can't leave another rule broken. Returns the texts it fixed. Used for new crew calls + starting
+// templates in the hub, and on every website draft before it's priced.
+export const AUTO_FIX = ['depart', 'back', 'unload', 'kits', 'premium', 'premium_all', 'team', 'ballast'];
+export function followPlaybook(plan, inquiry = {}, ctx = {}, types = AUTO_FIX) {
+  const done = [];
+  for (let pass = 0; pass < 3; pass++) {
+    const todo = playbookTips(plan, inquiry, ctx).filter((t) => t.fix && types.includes(t.fix.type));
+    if (!todo.length) break;
+    for (const t of todo) if (applyTip(plan, t.fix)) done.push(t.text);
+  }
+  return done;
+}
+// Applies one tip's fix to a plan (mutates it). Returns false when it can't.
+export function applyTip(plan, fix) {
+  const sh = fix.shift != null ? (plan.shifts || [])[fix.shift] : null;
+  const shiftSteps = (x, from, d) => { (x.steps || []).forEach((st, k) => { if (k >= from) { const m = toMinutes(st.time); if (m != null) st.time = fmtMin(m + d); } }); };
+  switch (fix.type) {
+    case 'premium': if (!sh) return false; sh.premium_reasons = [...new Set([...(sh.premium_reasons || []).filter((r) => !(fix.reason === 'major_holiday' && r === 'holiday')), fix.reason])]; return true;
+    case 'premium_all': (plan.shifts || []).filter((x) => x.kind !== 'design').forEach((x) => { x.premium_reasons = [...new Set([...(x.premium_reasons || []), fix.reason])]; }); return true;
+    case 'team': if (!sh) return false; sh.team_size = fix.size; return true;
+    case 'depart': if (!sh) return false; { const st = sh.steps || []; const si = st.findIndex((x) => /begin|start/i.test(x.label || '')); st.forEach((x, k) => { if (k < si) { const m = toMinutes(x.time); if (m != null) x.time = fmtMin(m - fix.minutes); } }); sh.depart_hq = st[0]?.time || fmtMin(toMinutes(sh.depart_hq) - fix.minutes); } return true;
+    case 'back': if (!sh) return false; { const st = sh.steps || []; shiftSteps(sh, st.length - 1, fix.minutes); sh.back_hq = st[st.length - 1]?.time || sh.back_hq; } return true;
+    case 'unload': if (!sh) return false; { const st = sh.steps || []; const lt = st[st.length - 1].time; st.push({ time: lt, label: `Unload + organize (${fix.minutes} min)` }, { time: fmtMin(toMinutes(lt) + fix.minutes), label: 'Done' }); sh.back_hq = st[st.length - 1].time; } return true;
+    case 'hotel': plan.travel = { ...(plan.travel || {}), hotel_rooms: fix.rooms, hotel_nights: fix.nights, meal_person_days: fix.meals }; return true;
+    case 'kits': plan.equipment = { ...(plan.equipment || {}), strike_kits: fix.value }; return true;
+    case 'ballast': { const f = (plan.fabrication || [])[fix.fab]; if (!f) return false; if (Array.isArray(f.components)) f.components.push({ item: 'Sand bags, ballast (8)', qty: 8, unit_cost: 0 }); else f.materials_breakdown = `${f.materials_breakdown ? `${f.materials_breakdown}; ` : ''}8 sand bags (ballast)`; f.description = `${f.description ? `${f.description} ` : ''}Ballast: 8 sand bags.`.trim(); } return true;
+    case 'fabtruck': plan.vehicles = [...(plan.vehicles || []), { id: `v${Math.random().toString(36).slice(2, 7)}`, kind: 'uhaul', label: '15 ft U-Haul', rental_days: 2, trips: 1, round_trip_miles: (plan.vehicles || [])[0]?.round_trip_miles || 0 }];
+      (plan.shifts || []).filter((x) => ['install', 'strike'].includes(x.kind) && Number(x.team_size) < 3).forEach((x) => { x.team_size = 3; }); return true;
+    default: return false;
+  }
+}
+
 export function shiftHours(depart, back) {
   const a = toMinutes(depart);
   const b = toMinutes(back);
@@ -200,6 +356,9 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     }
     if (Math.round(num(s.team_size)) === 1) warnings.push(`"${s.label}" is a solo shift: only OK with a very strong team member, a very easy job, daytime and an easy drive.`);
     if (hrs > 16) warnings.push(`"${s.label}" is ${hrs} hrs portal to portal. Check team safety / hotel.`);
+    const hw = strikeWindow(s);
+    if (hw?.tight && !hw.truck) warnings.push(`"${s.label}" has ${hw.minutes} min from strike start to the ${s.hard_out} hard out: add 30-60 min after the hard out to finish the strike at the truck (stems out of vessels, pack + strap).`);
+    else if (hw?.tight) warnings.push(`"${s.label}": ${s.truck_applied || 45} min added after the ${s.hard_out} hard out to finish the strike at the truck (1-hour hard out rule). Change it on the call if the load is lighter or heavier.`);
     const kind = s.kind || 'install';
     let grand = ov.laborPerHour != null ? undefined : g?.laborPerHour?.[kind]; // a typed labor rate for the quote beats the client's deal
     if (grand != null && g.laborByYear) {
@@ -531,7 +690,10 @@ export function priceQuote(plan, inquiry = {}, ctx = {}) {
     } else groups.push({ title: 'Labor + logistics', lines: rest });
     groups = groups.filter((g) => g.lines.length).map((g) => ({ ...g, total: round2(g.lines.reduce((a, l) => a + l.amount, 0)) }));
   }
+  const tips = playbookTips(plan, inquiry, ctx);
+  for (const t of tips) if (!warnings.includes(t.text)) warnings.push(t.text);
   return {
+    tips,
     groups,
     optionalLines: optionals,
     optional: optBlocks,
